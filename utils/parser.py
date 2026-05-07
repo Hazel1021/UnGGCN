@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('--dim', type=int, default=64, help='embedding size')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument("--batch_test_flag", type=bool, default=True, help="use gpu or not")
+    parser.add_argument("--lw", type=float, default=1.0, help="weight of normal-gamma-loss")
 
     parser.add_argument("--K", type=int, default=1, help="number of negative in K-pair loss")
 
@@ -36,7 +37,7 @@ def parse_args():
     parser.add_argument("--logsigma",type=float, default=0.0, help="init value for log sigma")
     parser.add_argument("--noise_ratio", type=float, default=0.0, help="ratio of noisy training data")
     parser.add_argument("--seed", type=int, default=2025, help="random seed")
-    parser.add_argument("--disable_ump", action="store_true",
+    parser.add_argument("--disable_ump", action="store_true",default=False,
                         help="disable uncertainty-guided message passing for ablation")
     # ===== save model ===== #
     parser.add_argument("--save", type=bool, default=True, help="save model or not")

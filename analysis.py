@@ -25,7 +25,7 @@ from modules.UnGGSL import UnGGSL
 # ─── 工具函数 ───
 
 def find_checkpoint(model_dir, dataset, noise_ratio, dim, context_hops, beta, lr):
-    exact = f'model_dataset_{dataset}_noise_{noise_ratio}_dim{dim}_hops{context_hops}_beta{beta}_lr{lr}_noatt.ckpt'
+    exact = f'model_dataset_{dataset}_noise_{noise_ratio}_dim{dim}_hops{context_hops}_beta{beta}_lr{lr}.ckpt'
     path = os.path.join(model_dir, exact)
     if os.path.exists(path):
         return path

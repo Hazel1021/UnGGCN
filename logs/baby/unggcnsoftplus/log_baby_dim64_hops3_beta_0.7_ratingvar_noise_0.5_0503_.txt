@@ -1,0 +1,575 @@
+[2026-05-03 21:57:30] - INFO - model parameters: Namespace(dataset='baby', data_path='data/', gnn='unggcn', epoch=1000, batch_size=2048, test_batch_size=2048, dim=64, lr=0.001, batch_test_flag=True, K=1, n_negs=1, cuda=True, gpu_id=0, Ks='[5,10,20,50]', test_flag='part', context_hops=3, beta=0.7, log_dir='./logs/', logsigma=0.0, noise_ratio=0.5, seed=2025, disable_ump=False, save=True, out_dir='./recordings/', model_dir='./models/', sweep=False, agent=None, count=10)
+[2026-05-03 21:57:38] - INFO - Epoch 0, Time: 7.4230s
+[2026-05-03 21:58:06] - INFO - Testing - epoch: 0, testing time(s): 27.1839, Loss: 330.5476
+[2026-05-03 21:58:06] - INFO - 		ndcg@5: 0.0194 ; ndcg@10: 0.0248 ; ndcg@20: 0.0326 ; ndcg@50: 0.0472
+[2026-05-03 21:58:06] - INFO - 		recall@5: 0.0196 ; recall@10: 0.0323 ; recall@20: 0.0539 ; recall@50: 0.1041
+[2026-05-03 21:58:06] - INFO - 		precision@5: 0.0144 ; precision@10: 0.0119 ; precision@20: 0.0098 ; precision@50: 0.0075
+[2026-05-03 21:58:06] - INFO - 		hit_ratio@5: 0.0696 ; hit_ratio@10: 0.1113 ; hit_ratio@20: 0.1761 ; hit_ratio@50: 0.3100
+[2026-05-03 21:58:31] - INFO - Validation - epoch: 0, validation time(s): 25.1386, Loss: 330.5476
+[2026-05-03 21:58:31] - INFO - 		ndcg@5: 0.0128 ; ndcg@10: 0.0174 ; ndcg@20: 0.0230 ; ndcg@50: 0.0327
+[2026-05-03 21:58:31] - INFO - 		recall@5: 0.0200 ; recall@10: 0.0341 ; recall@20: 0.0553 ; recall@50: 0.1023
+[2026-05-03 21:58:31] - INFO - 		precision@5: 0.0047 ; precision@10: 0.0040 ; precision@20: 0.0033 ; precision@50: 0.0025
+[2026-05-03 21:58:31] - INFO - 		hit_ratio@5: 0.0235 ; hit_ratio@10: 0.0399 ; hit_ratio@20: 0.0653 ; hit_ratio@50: 0.1199
+[2026-05-03 21:58:38] - INFO - Epoch 1, Time: 6.7490s
+[2026-05-03 21:58:38] - INFO - Epoch 1: Training Loss: 320.9865, Time: 6.7490s
+[2026-05-03 21:58:44] - INFO - Epoch 2, Time: 6.5301s
+[2026-05-03 21:58:44] - INFO - Epoch 2: Training Loss: 313.3519, Time: 6.5301s
+[2026-05-03 21:58:51] - INFO - Epoch 3, Time: 6.5154s
+[2026-05-03 21:58:51] - INFO - Epoch 3: Training Loss: 310.4695, Time: 6.5154s
+[2026-05-03 21:58:58] - INFO - Epoch 4, Time: 6.4865s
+[2026-05-03 21:58:58] - INFO - Epoch 4: Training Loss: 309.2569, Time: 6.4865s
+[2026-05-03 21:59:04] - INFO - Epoch 5, Time: 6.4808s
+[2026-05-03 21:59:30] - INFO - Testing - epoch: 5, testing time(s): 26.1047, Loss: 308.5635
+[2026-05-03 21:59:30] - INFO - 		ndcg@5: 0.0201 ; ndcg@10: 0.0253 ; ndcg@20: 0.0335 ; ndcg@50: 0.0480
+[2026-05-03 21:59:30] - INFO - 		recall@5: 0.0202 ; recall@10: 0.0328 ; recall@20: 0.0552 ; recall@50: 0.1053
+[2026-05-03 21:59:30] - INFO - 		precision@5: 0.0151 ; precision@10: 0.0122 ; precision@20: 0.0102 ; precision@50: 0.0077
+[2026-05-03 21:59:30] - INFO - 		hit_ratio@5: 0.0727 ; hit_ratio@10: 0.1136 ; hit_ratio@20: 0.1806 ; hit_ratio@50: 0.3148
+[2026-05-03 21:59:53] - INFO - Validation - epoch: 5, validation time(s): 22.7763, Loss: 308.5635
+[2026-05-03 21:59:53] - INFO - 		ndcg@5: 0.0133 ; ndcg@10: 0.0179 ; ndcg@20: 0.0235 ; ndcg@50: 0.0334
+[2026-05-03 21:59:53] - INFO - 		recall@5: 0.0205 ; recall@10: 0.0346 ; recall@20: 0.0561 ; recall@50: 0.1038
+[2026-05-03 21:59:53] - INFO - 		precision@5: 0.0050 ; precision@10: 0.0042 ; precision@20: 0.0034 ; precision@50: 0.0026
+[2026-05-03 21:59:53] - INFO - 		hit_ratio@5: 0.0251 ; hit_ratio@10: 0.0416 ; hit_ratio@20: 0.0669 ; hit_ratio@50: 0.1235
+[2026-05-03 22:00:00] - INFO - Epoch 6, Time: 6.6109s
+[2026-05-03 22:00:00] - INFO - Epoch 6: Training Loss: 308.2420, Time: 6.6109s
+[2026-05-03 22:00:07] - INFO - Epoch 7, Time: 6.5437s
+[2026-05-03 22:00:07] - INFO - Epoch 7: Training Loss: 307.8697, Time: 6.5437s
+[2026-05-03 22:00:13] - INFO - Epoch 8, Time: 6.5875s
+[2026-05-03 22:00:13] - INFO - Epoch 8: Training Loss: 307.4389, Time: 6.5875s
+[2026-05-03 22:00:20] - INFO - Epoch 9, Time: 6.5450s
+[2026-05-03 22:00:20] - INFO - Epoch 9: Training Loss: 307.1068, Time: 6.5450s
+[2026-05-03 22:00:27] - INFO - Epoch 10, Time: 6.4850s
+[2026-05-03 22:00:52] - INFO - Testing - epoch: 10, testing time(s): 25.9013, Loss: 306.7152
+[2026-05-03 22:00:52] - INFO - 		ndcg@5: 0.0216 ; ndcg@10: 0.0269 ; ndcg@20: 0.0352 ; ndcg@50: 0.0503
+[2026-05-03 22:00:52] - INFO - 		recall@5: 0.0210 ; recall@10: 0.0343 ; recall@20: 0.0575 ; recall@50: 0.1088
+[2026-05-03 22:00:52] - INFO - 		precision@5: 0.0162 ; precision@10: 0.0131 ; precision@20: 0.0108 ; precision@50: 0.0081
+[2026-05-03 22:00:52] - INFO - 		hit_ratio@5: 0.0766 ; hit_ratio@10: 0.1208 ; hit_ratio@20: 0.1896 ; hit_ratio@50: 0.3248
+[2026-05-03 22:01:17] - INFO - Validation - epoch: 10, validation time(s): 24.4806, Loss: 306.7152
+[2026-05-03 22:01:17] - INFO - 		ndcg@5: 0.0142 ; ndcg@10: 0.0190 ; ndcg@20: 0.0247 ; ndcg@50: 0.0347
+[2026-05-03 22:01:17] - INFO - 		recall@5: 0.0217 ; recall@10: 0.0361 ; recall@20: 0.0580 ; recall@50: 0.1061
+[2026-05-03 22:01:17] - INFO - 		precision@5: 0.0055 ; precision@10: 0.0046 ; precision@20: 0.0037 ; precision@50: 0.0027
+[2026-05-03 22:01:17] - INFO - 		hit_ratio@5: 0.0272 ; hit_ratio@10: 0.0445 ; hit_ratio@20: 0.0706 ; hit_ratio@50: 0.1280
+[2026-05-03 22:01:24] - INFO - Epoch 11, Time: 6.8655s
+[2026-05-03 22:01:24] - INFO - Epoch 11: Training Loss: 306.3034, Time: 6.8655s
+[2026-05-03 22:01:31] - INFO - Epoch 12, Time: 6.9703s
+[2026-05-03 22:01:31] - INFO - Epoch 12: Training Loss: 306.0431, Time: 6.9703s
+[2026-05-03 22:01:38] - INFO - Epoch 13, Time: 6.6190s
+[2026-05-03 22:01:38] - INFO - Epoch 13: Training Loss: 305.5645, Time: 6.6190s
+[2026-05-03 22:01:44] - INFO - Epoch 14, Time: 6.5493s
+[2026-05-03 22:01:44] - INFO - Epoch 14: Training Loss: 305.1247, Time: 6.5493s
+[2026-05-03 22:01:51] - INFO - Epoch 15, Time: 6.4860s
+[2026-05-03 22:02:17] - INFO - Testing - epoch: 15, testing time(s): 26.2455, Loss: 304.7969
+[2026-05-03 22:02:17] - INFO - 		ndcg@5: 0.0223 ; ndcg@10: 0.0278 ; ndcg@20: 0.0363 ; ndcg@50: 0.0516
+[2026-05-03 22:02:17] - INFO - 		recall@5: 0.0220 ; recall@10: 0.0358 ; recall@20: 0.0597 ; recall@50: 0.1118
+[2026-05-03 22:02:17] - INFO - 		precision@5: 0.0173 ; precision@10: 0.0138 ; precision@20: 0.0113 ; precision@50: 0.0084
+[2026-05-03 22:02:17] - INFO - 		hit_ratio@5: 0.0806 ; hit_ratio@10: 0.1257 ; hit_ratio@20: 0.1961 ; hit_ratio@50: 0.3341
+[2026-05-03 22:02:41] - INFO - Validation - epoch: 15, validation time(s): 23.4702, Loss: 304.7969
+[2026-05-03 22:02:41] - INFO - 		ndcg@5: 0.0150 ; ndcg@10: 0.0196 ; ndcg@20: 0.0258 ; ndcg@50: 0.0362
+[2026-05-03 22:02:41] - INFO - 		recall@5: 0.0226 ; recall@10: 0.0366 ; recall@20: 0.0602 ; recall@50: 0.1101
+[2026-05-03 22:02:41] - INFO - 		precision@5: 0.0058 ; precision@10: 0.0047 ; precision@20: 0.0038 ; precision@50: 0.0028
+[2026-05-03 22:02:41] - INFO - 		hit_ratio@5: 0.0286 ; hit_ratio@10: 0.0461 ; hit_ratio@20: 0.0742 ; hit_ratio@50: 0.1335
+[2026-05-03 22:02:48] - INFO - Epoch 16, Time: 6.8736s
+[2026-05-03 22:02:48] - INFO - Epoch 16: Training Loss: 304.2839, Time: 6.8736s
+[2026-05-03 22:02:55] - INFO - Epoch 17, Time: 7.0061s
+[2026-05-03 22:02:55] - INFO - Epoch 17: Training Loss: 303.9258, Time: 7.0061s
+[2026-05-03 22:03:02] - INFO - Epoch 18, Time: 6.9239s
+[2026-05-03 22:03:02] - INFO - Epoch 18: Training Loss: 303.5114, Time: 6.9239s
+[2026-05-03 22:03:09] - INFO - Epoch 19, Time: 6.8054s
+[2026-05-03 22:03:09] - INFO - Epoch 19: Training Loss: 303.0913, Time: 6.8054s
+[2026-05-03 22:03:16] - INFO - Epoch 20, Time: 6.5589s
+[2026-05-03 22:03:43] - INFO - Testing - epoch: 20, testing time(s): 26.9662, Loss: 302.7231
+[2026-05-03 22:03:43] - INFO - 		ndcg@5: 0.0227 ; ndcg@10: 0.0280 ; ndcg@20: 0.0367 ; ndcg@50: 0.0525
+[2026-05-03 22:03:43] - INFO - 		recall@5: 0.0224 ; recall@10: 0.0362 ; recall@20: 0.0602 ; recall@50: 0.1142
+[2026-05-03 22:03:43] - INFO - 		precision@5: 0.0177 ; precision@10: 0.0140 ; precision@20: 0.0114 ; precision@50: 0.0086
+[2026-05-03 22:03:43] - INFO - 		hit_ratio@5: 0.0827 ; hit_ratio@10: 0.1267 ; hit_ratio@20: 0.1992 ; hit_ratio@50: 0.3397
+[2026-05-03 22:04:07] - INFO - Validation - epoch: 20, validation time(s): 23.9166, Loss: 302.7231
+[2026-05-03 22:04:07] - INFO - 		ndcg@5: 0.0154 ; ndcg@10: 0.0204 ; ndcg@20: 0.0263 ; ndcg@50: 0.0371
+[2026-05-03 22:04:07] - INFO - 		recall@5: 0.0231 ; recall@10: 0.0378 ; recall@20: 0.0602 ; recall@50: 0.1121
+[2026-05-03 22:04:07] - INFO - 		precision@5: 0.0059 ; precision@10: 0.0049 ; precision@20: 0.0039 ; precision@50: 0.0029
+[2026-05-03 22:04:07] - INFO - 		hit_ratio@5: 0.0290 ; hit_ratio@10: 0.0476 ; hit_ratio@20: 0.0748 ; hit_ratio@50: 0.1363
+[2026-05-03 22:04:13] - INFO - Epoch 21, Time: 6.5696s
+[2026-05-03 22:04:13] - INFO - Epoch 21: Training Loss: 302.3281, Time: 6.5696s
+[2026-05-03 22:04:20] - INFO - Epoch 22, Time: 6.8762s
+[2026-05-03 22:04:20] - INFO - Epoch 22: Training Loss: 301.9334, Time: 6.8762s
+[2026-05-03 22:04:27] - INFO - Epoch 23, Time: 6.8862s
+[2026-05-03 22:04:27] - INFO - Epoch 23: Training Loss: 301.5901, Time: 6.8862s
+[2026-05-03 22:04:34] - INFO - Epoch 24, Time: 6.9021s
+[2026-05-03 22:04:34] - INFO - Epoch 24: Training Loss: 301.1476, Time: 6.9021s
+[2026-05-03 22:04:41] - INFO - Epoch 25, Time: 6.7007s
+[2026-05-03 22:05:08] - INFO - Testing - epoch: 25, testing time(s): 26.7279, Loss: 300.8574
+[2026-05-03 22:05:08] - INFO - 		ndcg@5: 0.0224 ; ndcg@10: 0.0282 ; ndcg@20: 0.0367 ; ndcg@50: 0.0528
+[2026-05-03 22:05:08] - INFO - 		recall@5: 0.0221 ; recall@10: 0.0367 ; recall@20: 0.0601 ; recall@50: 0.1152
+[2026-05-03 22:05:08] - INFO - 		precision@5: 0.0175 ; precision@10: 0.0143 ; precision@20: 0.0115 ; precision@50: 0.0087
+[2026-05-03 22:05:08] - INFO - 		hit_ratio@5: 0.0812 ; hit_ratio@10: 0.1285 ; hit_ratio@20: 0.1996 ; hit_ratio@50: 0.3416
+[2026-05-03 22:05:31] - INFO - Validation - epoch: 25, validation time(s): 23.5479, Loss: 300.8574
+[2026-05-03 22:05:31] - INFO - 		ndcg@5: 0.0153 ; ndcg@10: 0.0201 ; ndcg@20: 0.0265 ; ndcg@50: 0.0371
+[2026-05-03 22:05:31] - INFO - 		recall@5: 0.0231 ; recall@10: 0.0377 ; recall@20: 0.0621 ; recall@50: 0.1131
+[2026-05-03 22:05:31] - INFO - 		precision@5: 0.0060 ; precision@10: 0.0049 ; precision@20: 0.0040 ; precision@50: 0.0029
+[2026-05-03 22:05:31] - INFO - 		hit_ratio@5: 0.0291 ; hit_ratio@10: 0.0476 ; hit_ratio@20: 0.0771 ; hit_ratio@50: 0.1371
+[2026-05-03 22:05:38] - INFO - Epoch 26, Time: 6.7282s
+[2026-05-03 22:05:38] - INFO - Epoch 26: Training Loss: 300.3503, Time: 6.7282s
+[2026-05-03 22:05:45] - INFO - Epoch 27, Time: 6.5965s
+[2026-05-03 22:05:45] - INFO - Epoch 27: Training Loss: 300.1135, Time: 6.5965s
+[2026-05-03 22:05:52] - INFO - Epoch 28, Time: 6.6363s
+[2026-05-03 22:05:52] - INFO - Epoch 28: Training Loss: 299.6351, Time: 6.6363s
+[2026-05-03 22:05:59] - INFO - Epoch 29, Time: 6.8819s
+[2026-05-03 22:05:59] - INFO - Epoch 29: Training Loss: 299.2741, Time: 6.8819s
+[2026-05-03 22:06:06] - INFO - Epoch 30, Time: 6.8706s
+[2026-05-03 22:06:32] - INFO - Testing - epoch: 30, testing time(s): 26.5710, Loss: 298.9303
+[2026-05-03 22:06:32] - INFO - 		ndcg@5: 0.0224 ; ndcg@10: 0.0282 ; ndcg@20: 0.0368 ; ndcg@50: 0.0530
+[2026-05-03 22:06:32] - INFO - 		recall@5: 0.0221 ; recall@10: 0.0365 ; recall@20: 0.0604 ; recall@50: 0.1156
+[2026-05-03 22:06:32] - INFO - 		precision@5: 0.0176 ; precision@10: 0.0143 ; precision@20: 0.0116 ; precision@50: 0.0087
+[2026-05-03 22:06:32] - INFO - 		hit_ratio@5: 0.0813 ; hit_ratio@10: 0.1288 ; hit_ratio@20: 0.1993 ; hit_ratio@50: 0.3438
+[2026-05-03 22:06:55] - INFO - Validation - epoch: 30, validation time(s): 23.2502, Loss: 298.9303
+[2026-05-03 22:06:55] - INFO - 		ndcg@5: 0.0154 ; ndcg@10: 0.0200 ; ndcg@20: 0.0262 ; ndcg@50: 0.0370
+[2026-05-03 22:06:55] - INFO - 		recall@5: 0.0235 ; recall@10: 0.0375 ; recall@20: 0.0610 ; recall@50: 0.1130
+[2026-05-03 22:06:55] - INFO - 		precision@5: 0.0060 ; precision@10: 0.0049 ; precision@20: 0.0040 ; precision@50: 0.0029
+[2026-05-03 22:06:55] - INFO - 		hit_ratio@5: 0.0295 ; hit_ratio@10: 0.0476 ; hit_ratio@20: 0.0763 ; hit_ratio@50: 0.1371
+[2026-05-03 22:07:02] - INFO - Epoch 31, Time: 6.8971s
+[2026-05-03 22:07:02] - INFO - Epoch 31: Training Loss: 298.5258, Time: 6.8971s
+[2026-05-03 22:07:10] - INFO - Epoch 32, Time: 6.8957s
+[2026-05-03 22:07:10] - INFO - Epoch 32: Training Loss: 298.1218, Time: 6.8957s
+[2026-05-03 22:07:16] - INFO - Epoch 33, Time: 6.5525s
+[2026-05-03 22:07:16] - INFO - Epoch 33: Training Loss: 297.7606, Time: 6.5525s
+[2026-05-03 22:07:23] - INFO - Epoch 34, Time: 6.6949s
+[2026-05-03 22:07:23] - INFO - Epoch 34: Training Loss: 297.3240, Time: 6.6949s
+[2026-05-03 22:07:30] - INFO - Epoch 35, Time: 6.9048s
+[2026-05-03 22:07:56] - INFO - Testing - epoch: 35, testing time(s): 26.1152, Loss: 296.8643
+[2026-05-03 22:07:56] - INFO - 		ndcg@5: 0.0226 ; ndcg@10: 0.0282 ; ndcg@20: 0.0372 ; ndcg@50: 0.0534
+[2026-05-03 22:07:56] - INFO - 		recall@5: 0.0224 ; recall@10: 0.0365 ; recall@20: 0.0611 ; recall@50: 0.1168
+[2026-05-03 22:07:56] - INFO - 		precision@5: 0.0176 ; precision@10: 0.0142 ; precision@20: 0.0118 ; precision@50: 0.0088
+[2026-05-03 22:07:56] - INFO - 		hit_ratio@5: 0.0821 ; hit_ratio@10: 0.1278 ; hit_ratio@20: 0.2017 ; hit_ratio@50: 0.3476
+[2026-05-03 22:08:20] - INFO - Validation - epoch: 35, validation time(s): 23.4148, Loss: 296.8643
+[2026-05-03 22:08:20] - INFO - 		ndcg@5: 0.0153 ; ndcg@10: 0.0201 ; ndcg@20: 0.0264 ; ndcg@50: 0.0371
+[2026-05-03 22:08:20] - INFO - 		recall@5: 0.0233 ; recall@10: 0.0376 ; recall@20: 0.0618 ; recall@50: 0.1131
+[2026-05-03 22:08:20] - INFO - 		precision@5: 0.0060 ; precision@10: 0.0049 ; precision@20: 0.0040 ; precision@50: 0.0029
+[2026-05-03 22:08:20] - INFO - 		hit_ratio@5: 0.0296 ; hit_ratio@10: 0.0477 ; hit_ratio@20: 0.0776 ; hit_ratio@50: 0.1373
+[2026-05-03 22:08:26] - INFO - Epoch 36, Time: 6.7589s
+[2026-05-03 22:08:26] - INFO - Epoch 36: Training Loss: 296.4902, Time: 6.7589s
+[2026-05-03 22:08:33] - INFO - Epoch 37, Time: 6.8686s
+[2026-05-03 22:08:33] - INFO - Epoch 37: Training Loss: 296.0231, Time: 6.8686s
+[2026-05-03 22:08:40] - INFO - Epoch 38, Time: 6.7990s
+[2026-05-03 22:08:40] - INFO - Epoch 38: Training Loss: 295.6170, Time: 6.7990s
+[2026-05-03 22:08:47] - INFO - Epoch 39, Time: 6.7410s
+[2026-05-03 22:08:47] - INFO - Epoch 39: Training Loss: 295.1346, Time: 6.7410s
+[2026-05-03 22:08:54] - INFO - Epoch 40, Time: 6.8934s
+[2026-05-03 22:09:21] - INFO - Testing - epoch: 40, testing time(s): 26.6239, Loss: 294.7195
+[2026-05-03 22:09:21] - INFO - 		ndcg@5: 0.0226 ; ndcg@10: 0.0286 ; ndcg@20: 0.0374 ; ndcg@50: 0.0537
+[2026-05-03 22:09:21] - INFO - 		recall@5: 0.0223 ; recall@10: 0.0372 ; recall@20: 0.0615 ; recall@50: 0.1170
+[2026-05-03 22:09:21] - INFO - 		precision@5: 0.0175 ; precision@10: 0.0145 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:09:21] - INFO - 		hit_ratio@5: 0.0819 ; hit_ratio@10: 0.1305 ; hit_ratio@20: 0.2033 ; hit_ratio@50: 0.3483
+[2026-05-03 22:09:45] - INFO - Validation - epoch: 40, validation time(s): 23.9829, Loss: 294.7195
+[2026-05-03 22:09:45] - INFO - 		ndcg@5: 0.0155 ; ndcg@10: 0.0199 ; ndcg@20: 0.0265 ; ndcg@50: 0.0377
+[2026-05-03 22:09:45] - INFO - 		recall@5: 0.0237 ; recall@10: 0.0371 ; recall@20: 0.0617 ; recall@50: 0.1160
+[2026-05-03 22:09:45] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0048 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:09:45] - INFO - 		hit_ratio@5: 0.0303 ; hit_ratio@10: 0.0472 ; hit_ratio@20: 0.0774 ; hit_ratio@50: 0.1405
+[2026-05-03 22:09:52] - INFO - Epoch 41, Time: 6.5849s
+[2026-05-03 22:09:52] - INFO - Epoch 41: Training Loss: 294.3958, Time: 6.5849s
+[2026-05-03 22:09:58] - INFO - Epoch 42, Time: 6.6239s
+[2026-05-03 22:09:58] - INFO - Epoch 42: Training Loss: 293.8814, Time: 6.6239s
+[2026-05-03 22:10:05] - INFO - Epoch 43, Time: 6.8049s
+[2026-05-03 22:10:05] - INFO - Epoch 43: Training Loss: 293.5349, Time: 6.8049s
+[2026-05-03 22:10:12] - INFO - Epoch 44, Time: 6.7911s
+[2026-05-03 22:10:12] - INFO - Epoch 44: Training Loss: 293.1449, Time: 6.7911s
+[2026-05-03 22:10:19] - INFO - Epoch 45, Time: 6.7852s
+[2026-05-03 22:10:48] - INFO - Testing - epoch: 45, testing time(s): 29.0148, Loss: 292.6437
+[2026-05-03 22:10:48] - INFO - 		ndcg@5: 0.0232 ; ndcg@10: 0.0292 ; ndcg@20: 0.0378 ; ndcg@50: 0.0543
+[2026-05-03 22:10:48] - INFO - 		recall@5: 0.0229 ; recall@10: 0.0377 ; recall@20: 0.0614 ; recall@50: 0.1177
+[2026-05-03 22:10:48] - INFO - 		precision@5: 0.0180 ; precision@10: 0.0147 ; precision@20: 0.0119 ; precision@50: 0.0090
+[2026-05-03 22:10:48] - INFO - 		hit_ratio@5: 0.0835 ; hit_ratio@10: 0.1322 ; hit_ratio@20: 0.2036 ; hit_ratio@50: 0.3493
+[2026-05-03 22:11:17] - INFO - Validation - epoch: 45, validation time(s): 28.3911, Loss: 292.6437
+[2026-05-03 22:11:17] - INFO - 		ndcg@5: 0.0154 ; ndcg@10: 0.0199 ; ndcg@20: 0.0265 ; ndcg@50: 0.0377
+[2026-05-03 22:11:17] - INFO - 		recall@5: 0.0238 ; recall@10: 0.0373 ; recall@20: 0.0619 ; recall@50: 0.1160
+[2026-05-03 22:11:17] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0049 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:11:17] - INFO - 		hit_ratio@5: 0.0304 ; hit_ratio@10: 0.0474 ; hit_ratio@20: 0.0779 ; hit_ratio@50: 0.1409
+[2026-05-03 22:11:23] - INFO - Epoch 46, Time: 6.5985s
+[2026-05-03 22:11:23] - INFO - Epoch 46: Training Loss: 292.2763, Time: 6.5985s
+[2026-05-03 22:11:30] - INFO - Epoch 47, Time: 6.7369s
+[2026-05-03 22:11:30] - INFO - Epoch 47: Training Loss: 291.8477, Time: 6.7369s
+[2026-05-03 22:11:37] - INFO - Epoch 48, Time: 6.8133s
+[2026-05-03 22:11:37] - INFO - Epoch 48: Training Loss: 291.3957, Time: 6.8133s
+[2026-05-03 22:11:44] - INFO - Epoch 49, Time: 6.8539s
+[2026-05-03 22:11:44] - INFO - Epoch 49: Training Loss: 291.1126, Time: 6.8539s
+[2026-05-03 22:11:51] - INFO - Epoch 50, Time: 6.6433s
+[2026-05-03 22:12:16] - INFO - Testing - epoch: 50, testing time(s): 25.4983, Loss: 290.6936
+[2026-05-03 22:12:16] - INFO - 		ndcg@5: 0.0233 ; ndcg@10: 0.0293 ; ndcg@20: 0.0382 ; ndcg@50: 0.0544
+[2026-05-03 22:12:16] - INFO - 		recall@5: 0.0228 ; recall@10: 0.0375 ; recall@20: 0.0620 ; recall@50: 0.1174
+[2026-05-03 22:12:16] - INFO - 		precision@5: 0.0180 ; precision@10: 0.0147 ; precision@20: 0.0120 ; precision@50: 0.0090
+[2026-05-03 22:12:16] - INFO - 		hit_ratio@5: 0.0834 ; hit_ratio@10: 0.1317 ; hit_ratio@20: 0.2058 ; hit_ratio@50: 0.3487
+[2026-05-03 22:12:40] - INFO - Validation - epoch: 50, validation time(s): 23.3977, Loss: 290.6936
+[2026-05-03 22:12:40] - INFO - 		ndcg@5: 0.0158 ; ndcg@10: 0.0204 ; ndcg@20: 0.0269 ; ndcg@50: 0.0380
+[2026-05-03 22:12:40] - INFO - 		recall@5: 0.0244 ; recall@10: 0.0381 ; recall@20: 0.0631 ; recall@50: 0.1165
+[2026-05-03 22:12:40] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0050 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:12:40] - INFO - 		hit_ratio@5: 0.0311 ; hit_ratio@10: 0.0488 ; hit_ratio@20: 0.0789 ; hit_ratio@50: 0.1413
+[2026-05-03 22:12:46] - INFO - Epoch 51, Time: 6.5745s
+[2026-05-03 22:12:46] - INFO - Epoch 51: Training Loss: 290.3309, Time: 6.5745s
+[2026-05-03 22:12:53] - INFO - Epoch 52, Time: 6.5406s
+[2026-05-03 22:12:53] - INFO - Epoch 52: Training Loss: 290.0132, Time: 6.5406s
+[2026-05-03 22:13:00] - INFO - Epoch 53, Time: 6.4677s
+[2026-05-03 22:13:00] - INFO - Epoch 53: Training Loss: 289.5829, Time: 6.4677s
+[2026-05-03 22:13:07] - INFO - Epoch 54, Time: 6.6839s
+[2026-05-03 22:13:07] - INFO - Epoch 54: Training Loss: 289.2937, Time: 6.6839s
+[2026-05-03 22:13:13] - INFO - Epoch 55, Time: 6.7992s
+[2026-05-03 22:13:40] - INFO - Testing - epoch: 55, testing time(s): 26.0841, Loss: 289.0024
+[2026-05-03 22:13:40] - INFO - 		ndcg@5: 0.0235 ; ndcg@10: 0.0294 ; ndcg@20: 0.0382 ; ndcg@50: 0.0543
+[2026-05-03 22:13:40] - INFO - 		recall@5: 0.0231 ; recall@10: 0.0378 ; recall@20: 0.0619 ; recall@50: 0.1168
+[2026-05-03 22:13:40] - INFO - 		precision@5: 0.0182 ; precision@10: 0.0147 ; precision@20: 0.0120 ; precision@50: 0.0089
+[2026-05-03 22:13:40] - INFO - 		hit_ratio@5: 0.0848 ; hit_ratio@10: 0.1325 ; hit_ratio@20: 0.2052 ; hit_ratio@50: 0.3473
+[2026-05-03 22:14:04] - INFO - Validation - epoch: 55, validation time(s): 24.6109, Loss: 289.0024
+[2026-05-03 22:14:04] - INFO - 		ndcg@5: 0.0162 ; ndcg@10: 0.0208 ; ndcg@20: 0.0271 ; ndcg@50: 0.0382
+[2026-05-03 22:14:04] - INFO - 		recall@5: 0.0249 ; recall@10: 0.0386 ; recall@20: 0.0625 ; recall@50: 0.1163
+[2026-05-03 22:14:04] - INFO - 		precision@5: 0.0064 ; precision@10: 0.0051 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:14:04] - INFO - 		hit_ratio@5: 0.0316 ; hit_ratio@10: 0.0497 ; hit_ratio@20: 0.0781 ; hit_ratio@50: 0.1412
+[2026-05-03 22:14:11] - INFO - Epoch 56, Time: 6.7840s
+[2026-05-03 22:14:11] - INFO - Epoch 56: Training Loss: 288.7119, Time: 6.7840s
+[2026-05-03 22:14:18] - INFO - Epoch 57, Time: 6.6071s
+[2026-05-03 22:14:18] - INFO - Epoch 57: Training Loss: 288.4038, Time: 6.6071s
+[2026-05-03 22:14:25] - INFO - Epoch 58, Time: 6.5826s
+[2026-05-03 22:14:25] - INFO - Epoch 58: Training Loss: 288.1061, Time: 6.5826s
+[2026-05-03 22:14:31] - INFO - Epoch 59, Time: 6.5240s
+[2026-05-03 22:14:31] - INFO - Epoch 59: Training Loss: 287.8550, Time: 6.5240s
+[2026-05-03 22:14:38] - INFO - Epoch 60, Time: 6.8038s
+[2026-05-03 22:15:05] - INFO - Testing - epoch: 60, testing time(s): 27.2320, Loss: 287.5738
+[2026-05-03 22:15:05] - INFO - 		ndcg@5: 0.0237 ; ndcg@10: 0.0297 ; ndcg@20: 0.0384 ; ndcg@50: 0.0545
+[2026-05-03 22:15:05] - INFO - 		recall@5: 0.0230 ; recall@10: 0.0379 ; recall@20: 0.0618 ; recall@50: 0.1169
+[2026-05-03 22:15:05] - INFO - 		precision@5: 0.0182 ; precision@10: 0.0148 ; precision@20: 0.0120 ; precision@50: 0.0089
+[2026-05-03 22:15:05] - INFO - 		hit_ratio@5: 0.0839 ; hit_ratio@10: 0.1330 ; hit_ratio@20: 0.2051 ; hit_ratio@50: 0.3471
+[2026-05-03 22:15:30] - INFO - Validation - epoch: 60, validation time(s): 24.4325, Loss: 287.5738
+[2026-05-03 22:15:30] - INFO - 		ndcg@5: 0.0160 ; ndcg@10: 0.0209 ; ndcg@20: 0.0270 ; ndcg@50: 0.0384
+[2026-05-03 22:15:30] - INFO - 		recall@5: 0.0242 ; recall@10: 0.0387 ; recall@20: 0.0619 ; recall@50: 0.1168
+[2026-05-03 22:15:30] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:15:30] - INFO - 		hit_ratio@5: 0.0308 ; hit_ratio@10: 0.0495 ; hit_ratio@20: 0.0774 ; hit_ratio@50: 0.1416
+[2026-05-03 22:15:37] - INFO - Epoch 61, Time: 6.6107s
+[2026-05-03 22:15:37] - INFO - Epoch 61: Training Loss: 287.3331, Time: 6.6107s
+[2026-05-03 22:15:43] - INFO - Epoch 62, Time: 6.7572s
+[2026-05-03 22:15:43] - INFO - Epoch 62: Training Loss: 287.0562, Time: 6.7572s
+[2026-05-03 22:15:50] - INFO - Epoch 63, Time: 6.5591s
+[2026-05-03 22:15:50] - INFO - Epoch 63: Training Loss: 286.8675, Time: 6.5591s
+[2026-05-03 22:15:57] - INFO - Epoch 64, Time: 6.5735s
+[2026-05-03 22:15:57] - INFO - Epoch 64: Training Loss: 286.6268, Time: 6.5735s
+[2026-05-03 22:16:04] - INFO - Epoch 65, Time: 6.5774s
+[2026-05-03 22:16:30] - INFO - Testing - epoch: 65, testing time(s): 26.4663, Loss: 286.4370
+[2026-05-03 22:16:30] - INFO - 		ndcg@5: 0.0240 ; ndcg@10: 0.0298 ; ndcg@20: 0.0385 ; ndcg@50: 0.0548
+[2026-05-03 22:16:30] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0379 ; recall@20: 0.0617 ; recall@50: 0.1176
+[2026-05-03 22:16:30] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0148 ; precision@20: 0.0120 ; precision@50: 0.0090
+[2026-05-03 22:16:30] - INFO - 		hit_ratio@5: 0.0857 ; hit_ratio@10: 0.1331 ; hit_ratio@20: 0.2042 ; hit_ratio@50: 0.3473
+[2026-05-03 22:16:54] - INFO - Validation - epoch: 65, validation time(s): 23.4474, Loss: 286.4370
+[2026-05-03 22:16:54] - INFO - 		ndcg@5: 0.0162 ; ndcg@10: 0.0209 ; ndcg@20: 0.0273 ; ndcg@50: 0.0385
+[2026-05-03 22:16:54] - INFO - 		recall@5: 0.0243 ; recall@10: 0.0384 ; recall@20: 0.0626 ; recall@50: 0.1169
+[2026-05-03 22:16:54] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:16:54] - INFO - 		hit_ratio@5: 0.0310 ; hit_ratio@10: 0.0491 ; hit_ratio@20: 0.0783 ; hit_ratio@50: 0.1417
+[2026-05-03 22:17:00] - INFO - Epoch 66, Time: 6.5816s
+[2026-05-03 22:17:00] - INFO - Epoch 66: Training Loss: 286.2162, Time: 6.5816s
+[2026-05-03 22:17:07] - INFO - Epoch 67, Time: 6.7114s
+[2026-05-03 22:17:07] - INFO - Epoch 67: Training Loss: 286.0274, Time: 6.7114s
+[2026-05-03 22:17:14] - INFO - Epoch 68, Time: 6.5771s
+[2026-05-03 22:17:14] - INFO - Epoch 68: Training Loss: 285.8278, Time: 6.5771s
+[2026-05-03 22:17:21] - INFO - Epoch 69, Time: 6.5862s
+[2026-05-03 22:17:21] - INFO - Epoch 69: Training Loss: 285.6784, Time: 6.5862s
+[2026-05-03 22:17:27] - INFO - Epoch 70, Time: 6.5853s
+[2026-05-03 22:17:54] - INFO - Testing - epoch: 70, testing time(s): 26.3463, Loss: 285.4869
+[2026-05-03 22:17:54] - INFO - 		ndcg@5: 0.0242 ; ndcg@10: 0.0300 ; ndcg@20: 0.0386 ; ndcg@50: 0.0549
+[2026-05-03 22:17:54] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0381 ; recall@20: 0.0617 ; recall@50: 0.1175
+[2026-05-03 22:17:54] - INFO - 		precision@5: 0.0184 ; precision@10: 0.0149 ; precision@20: 0.0120 ; precision@50: 0.0090
+[2026-05-03 22:17:54] - INFO - 		hit_ratio@5: 0.0858 ; hit_ratio@10: 0.1336 ; hit_ratio@20: 0.2047 ; hit_ratio@50: 0.3472
+[2026-05-03 22:18:19] - INFO - Validation - epoch: 70, validation time(s): 25.0107, Loss: 285.4869
+[2026-05-03 22:18:19] - INFO - 		ndcg@5: 0.0160 ; ndcg@10: 0.0209 ; ndcg@20: 0.0271 ; ndcg@50: 0.0384
+[2026-05-03 22:18:19] - INFO - 		recall@5: 0.0240 ; recall@10: 0.0387 ; recall@20: 0.0621 ; recall@50: 0.1165
+[2026-05-03 22:18:19] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:18:19] - INFO - 		hit_ratio@5: 0.0306 ; hit_ratio@10: 0.0495 ; hit_ratio@20: 0.0777 ; hit_ratio@50: 0.1415
+[2026-05-03 22:18:26] - INFO - Epoch 71, Time: 6.9561s
+[2026-05-03 22:18:26] - INFO - Epoch 71: Training Loss: 285.3779, Time: 6.9561s
+[2026-05-03 22:18:32] - INFO - Epoch 72, Time: 6.6701s
+[2026-05-03 22:18:32] - INFO - Epoch 72: Training Loss: 285.1447, Time: 6.6701s
+[2026-05-03 22:18:39] - INFO - Epoch 73, Time: 6.5126s
+[2026-05-03 22:18:39] - INFO - Epoch 73: Training Loss: 285.0121, Time: 6.5126s
+[2026-05-03 22:18:46] - INFO - Epoch 74, Time: 6.8003s
+[2026-05-03 22:18:46] - INFO - Epoch 74: Training Loss: 284.8417, Time: 6.8003s
+[2026-05-03 22:18:53] - INFO - Epoch 75, Time: 6.6430s
+[2026-05-03 22:19:20] - INFO - Testing - epoch: 75, testing time(s): 27.0454, Loss: 284.7648
+[2026-05-03 22:19:20] - INFO - 		ndcg@5: 0.0242 ; ndcg@10: 0.0301 ; ndcg@20: 0.0386 ; ndcg@50: 0.0548
+[2026-05-03 22:19:20] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0381 ; recall@20: 0.0615 ; recall@50: 0.1170
+[2026-05-03 22:19:20] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0149 ; precision@20: 0.0120 ; precision@50: 0.0089
+[2026-05-03 22:19:20] - INFO - 		hit_ratio@5: 0.0861 ; hit_ratio@10: 0.1336 ; hit_ratio@20: 0.2039 ; hit_ratio@50: 0.3461
+[2026-05-03 22:19:43] - INFO - Validation - epoch: 75, validation time(s): 23.5263, Loss: 284.7648
+[2026-05-03 22:19:43] - INFO - 		ndcg@5: 0.0158 ; ndcg@10: 0.0209 ; ndcg@20: 0.0269 ; ndcg@50: 0.0384
+[2026-05-03 22:19:43] - INFO - 		recall@5: 0.0237 ; recall@10: 0.0388 ; recall@20: 0.0620 ; recall@50: 0.1170
+[2026-05-03 22:19:43] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:19:43] - INFO - 		hit_ratio@5: 0.0307 ; hit_ratio@10: 0.0497 ; hit_ratio@20: 0.0777 ; hit_ratio@50: 0.1421
+[2026-05-03 22:19:50] - INFO - Epoch 76, Time: 6.8613s
+[2026-05-03 22:19:50] - INFO - Epoch 76: Training Loss: 284.6226, Time: 6.8613s
+[2026-05-03 22:19:57] - INFO - Epoch 77, Time: 6.9713s
+[2026-05-03 22:19:57] - INFO - Epoch 77: Training Loss: 284.5116, Time: 6.9713s
+[2026-05-03 22:20:04] - INFO - Epoch 78, Time: 6.6507s
+[2026-05-03 22:20:04] - INFO - Epoch 78: Training Loss: 284.3983, Time: 6.6507s
+[2026-05-03 22:20:11] - INFO - Epoch 79, Time: 6.6550s
+[2026-05-03 22:20:11] - INFO - Epoch 79: Training Loss: 284.3010, Time: 6.6550s
+[2026-05-03 22:20:18] - INFO - Epoch 80, Time: 6.8958s
+[2026-05-03 22:20:44] - INFO - Testing - epoch: 80, testing time(s): 25.7111, Loss: 284.2452
+[2026-05-03 22:20:44] - INFO - 		ndcg@5: 0.0243 ; ndcg@10: 0.0301 ; ndcg@20: 0.0385 ; ndcg@50: 0.0548
+[2026-05-03 22:20:44] - INFO - 		recall@5: 0.0237 ; recall@10: 0.0383 ; recall@20: 0.0613 ; recall@50: 0.1170
+[2026-05-03 22:20:44] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0150 ; precision@20: 0.0120 ; precision@50: 0.0090
+[2026-05-03 22:20:44] - INFO - 		hit_ratio@5: 0.0867 ; hit_ratio@10: 0.1340 ; hit_ratio@20: 0.2037 ; hit_ratio@50: 0.3455
+[2026-05-03 22:21:07] - INFO - Validation - epoch: 80, validation time(s): 23.0817, Loss: 284.2452
+[2026-05-03 22:21:07] - INFO - 		ndcg@5: 0.0159 ; ndcg@10: 0.0209 ; ndcg@20: 0.0269 ; ndcg@50: 0.0382
+[2026-05-03 22:21:07] - INFO - 		recall@5: 0.0241 ; recall@10: 0.0388 ; recall@20: 0.0618 ; recall@50: 0.1162
+[2026-05-03 22:21:07] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:21:07] - INFO - 		hit_ratio@5: 0.0310 ; hit_ratio@10: 0.0494 ; hit_ratio@20: 0.0777 ; hit_ratio@50: 0.1410
+[2026-05-03 22:21:14] - INFO - Epoch 81, Time: 6.8572s
+[2026-05-03 22:21:14] - INFO - Epoch 81: Training Loss: 284.0670, Time: 6.8572s
+[2026-05-03 22:21:21] - INFO - Epoch 82, Time: 7.0111s
+[2026-05-03 22:21:21] - INFO - Epoch 82: Training Loss: 284.0335, Time: 7.0111s
+[2026-05-03 22:21:28] - INFO - Epoch 83, Time: 6.9123s
+[2026-05-03 22:21:28] - INFO - Epoch 83: Training Loss: 283.9174, Time: 6.9123s
+[2026-05-03 22:21:35] - INFO - Epoch 84, Time: 6.5956s
+[2026-05-03 22:21:35] - INFO - Epoch 84: Training Loss: 283.7753, Time: 6.5956s
+[2026-05-03 22:21:42] - INFO - Epoch 85, Time: 6.6656s
+[2026-05-03 22:22:08] - INFO - Testing - epoch: 85, testing time(s): 26.4933, Loss: 283.6939
+[2026-05-03 22:22:08] - INFO - 		ndcg@5: 0.0244 ; ndcg@10: 0.0303 ; ndcg@20: 0.0386 ; ndcg@50: 0.0549
+[2026-05-03 22:22:08] - INFO - 		recall@5: 0.0237 ; recall@10: 0.0386 ; recall@20: 0.0611 ; recall@50: 0.1171
+[2026-05-03 22:22:08] - INFO - 		precision@5: 0.0186 ; precision@10: 0.0150 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:22:08] - INFO - 		hit_ratio@5: 0.0869 ; hit_ratio@10: 0.1351 ; hit_ratio@20: 0.2032 ; hit_ratio@50: 0.3455
+[2026-05-03 22:22:31] - INFO - Validation - epoch: 85, validation time(s): 23.1666, Loss: 283.6939
+[2026-05-03 22:22:31] - INFO - 		ndcg@5: 0.0161 ; ndcg@10: 0.0209 ; ndcg@20: 0.0270 ; ndcg@50: 0.0383
+[2026-05-03 22:22:31] - INFO - 		recall@5: 0.0243 ; recall@10: 0.0385 ; recall@20: 0.0618 ; recall@50: 0.1160
+[2026-05-03 22:22:31] - INFO - 		precision@5: 0.0064 ; precision@10: 0.0051 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:22:31] - INFO - 		hit_ratio@5: 0.0314 ; hit_ratio@10: 0.0492 ; hit_ratio@20: 0.0777 ; hit_ratio@50: 0.1408
+[2026-05-03 22:22:38] - INFO - Epoch 86, Time: 6.5347s
+[2026-05-03 22:22:38] - INFO - Epoch 86: Training Loss: 283.6538, Time: 6.5347s
+[2026-05-03 22:22:45] - INFO - Epoch 87, Time: 6.8764s
+[2026-05-03 22:22:45] - INFO - Epoch 87: Training Loss: 283.5585, Time: 6.8764s
+[2026-05-03 22:22:52] - INFO - Epoch 88, Time: 6.8353s
+[2026-05-03 22:22:52] - INFO - Epoch 88: Training Loss: 283.4681, Time: 6.8353s
+[2026-05-03 22:22:59] - INFO - Epoch 89, Time: 6.7959s
+[2026-05-03 22:22:59] - INFO - Epoch 89: Training Loss: 283.4509, Time: 6.7959s
+[2026-05-03 22:23:05] - INFO - Epoch 90, Time: 6.5806s
+[2026-05-03 22:23:31] - INFO - Testing - epoch: 90, testing time(s): 26.0126, Loss: 283.3589
+[2026-05-03 22:23:31] - INFO - 		ndcg@5: 0.0243 ; ndcg@10: 0.0302 ; ndcg@20: 0.0385 ; ndcg@50: 0.0548
+[2026-05-03 22:23:31] - INFO - 		recall@5: 0.0235 ; recall@10: 0.0384 ; recall@20: 0.0612 ; recall@50: 0.1170
+[2026-05-03 22:23:31] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0150 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:23:31] - INFO - 		hit_ratio@5: 0.0866 ; hit_ratio@10: 0.1352 ; hit_ratio@20: 0.2029 ; hit_ratio@50: 0.3460
+[2026-05-03 22:23:55] - INFO - Validation - epoch: 90, validation time(s): 23.3170, Loss: 283.3589
+[2026-05-03 22:23:55] - INFO - 		ndcg@5: 0.0159 ; ndcg@10: 0.0210 ; ndcg@20: 0.0270 ; ndcg@50: 0.0382
+[2026-05-03 22:23:55] - INFO - 		recall@5: 0.0237 ; recall@10: 0.0390 ; recall@20: 0.0619 ; recall@50: 0.1156
+[2026-05-03 22:23:55] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:23:55] - INFO - 		hit_ratio@5: 0.0310 ; hit_ratio@10: 0.0495 ; hit_ratio@20: 0.0773 ; hit_ratio@50: 0.1400
+[2026-05-03 22:24:02] - INFO - Epoch 91, Time: 6.7974s
+[2026-05-03 22:24:02] - INFO - Epoch 91: Training Loss: 283.2813, Time: 6.7974s
+[2026-05-03 22:24:08] - INFO - Epoch 92, Time: 6.5987s
+[2026-05-03 22:24:08] - INFO - Epoch 92: Training Loss: 283.1342, Time: 6.5987s
+[2026-05-03 22:24:15] - INFO - Epoch 93, Time: 6.7878s
+[2026-05-03 22:24:15] - INFO - Epoch 93: Training Loss: 283.1311, Time: 6.7878s
+[2026-05-03 22:24:22] - INFO - Epoch 94, Time: 6.8983s
+[2026-05-03 22:24:22] - INFO - Epoch 94: Training Loss: 283.0749, Time: 6.8983s
+[2026-05-03 22:24:29] - INFO - Epoch 95, Time: 6.6943s
+[2026-05-03 22:24:55] - INFO - Testing - epoch: 95, testing time(s): 25.9524, Loss: 283.1084
+[2026-05-03 22:24:55] - INFO - 		ndcg@5: 0.0243 ; ndcg@10: 0.0302 ; ndcg@20: 0.0385 ; ndcg@50: 0.0547
+[2026-05-03 22:24:55] - INFO - 		recall@5: 0.0235 ; recall@10: 0.0385 ; recall@20: 0.0612 ; recall@50: 0.1166
+[2026-05-03 22:24:55] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0150 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:24:55] - INFO - 		hit_ratio@5: 0.0864 ; hit_ratio@10: 0.1347 ; hit_ratio@20: 0.2029 ; hit_ratio@50: 0.3454
+[2026-05-03 22:25:20] - INFO - Validation - epoch: 95, validation time(s): 24.9513, Loss: 283.1084
+[2026-05-03 22:25:20] - INFO - 		ndcg@5: 0.0159 ; ndcg@10: 0.0210 ; ndcg@20: 0.0272 ; ndcg@50: 0.0382
+[2026-05-03 22:25:20] - INFO - 		recall@5: 0.0236 ; recall@10: 0.0389 ; recall@20: 0.0623 ; recall@50: 0.1154
+[2026-05-03 22:25:20] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0051 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:25:20] - INFO - 		hit_ratio@5: 0.0309 ; hit_ratio@10: 0.0495 ; hit_ratio@20: 0.0776 ; hit_ratio@50: 0.1399
+[2026-05-03 22:25:27] - INFO - Epoch 96, Time: 6.9217s
+[2026-05-03 22:25:27] - INFO - Epoch 96: Training Loss: 282.9769, Time: 6.9217s
+[2026-05-03 22:25:34] - INFO - Epoch 97, Time: 7.0042s
+[2026-05-03 22:25:34] - INFO - Epoch 97: Training Loss: 282.9354, Time: 7.0042s
+[2026-05-03 22:25:41] - INFO - Epoch 98, Time: 6.6782s
+[2026-05-03 22:25:41] - INFO - Epoch 98: Training Loss: 282.8991, Time: 6.6782s
+[2026-05-03 22:25:48] - INFO - Epoch 99, Time: 6.8411s
+[2026-05-03 22:25:48] - INFO - Epoch 99: Training Loss: 282.8798, Time: 6.8411s
+[2026-05-03 22:25:55] - INFO - Epoch 100, Time: 6.8471s
+[2026-05-03 22:26:21] - INFO - Testing - epoch: 100, testing time(s): 25.9386, Loss: 282.8186
+[2026-05-03 22:26:21] - INFO - 		ndcg@5: 0.0245 ; ndcg@10: 0.0304 ; ndcg@20: 0.0386 ; ndcg@50: 0.0548
+[2026-05-03 22:26:21] - INFO - 		recall@5: 0.0235 ; recall@10: 0.0386 ; recall@20: 0.0611 ; recall@50: 0.1166
+[2026-05-03 22:26:21] - INFO - 		precision@5: 0.0186 ; precision@10: 0.0151 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:26:21] - INFO - 		hit_ratio@5: 0.0864 ; hit_ratio@10: 0.1355 ; hit_ratio@20: 0.2023 ; hit_ratio@50: 0.3449
+[2026-05-03 22:26:44] - INFO - Validation - epoch: 100, validation time(s): 22.9866, Loss: 282.8186
+[2026-05-03 22:26:44] - INFO - 		ndcg@5: 0.0159 ; ndcg@10: 0.0209 ; ndcg@20: 0.0271 ; ndcg@50: 0.0380
+[2026-05-03 22:26:44] - INFO - 		recall@5: 0.0233 ; recall@10: 0.0385 ; recall@20: 0.0619 ; recall@50: 0.1143
+[2026-05-03 22:26:44] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0050 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:26:44] - INFO - 		hit_ratio@5: 0.0307 ; hit_ratio@10: 0.0491 ; hit_ratio@20: 0.0770 ; hit_ratio@50: 0.1386
+[2026-05-03 22:26:51] - INFO - Epoch 101, Time: 6.5924s
+[2026-05-03 22:26:51] - INFO - Epoch 101: Training Loss: 282.7715, Time: 6.5924s
+[2026-05-03 22:26:58] - INFO - Epoch 102, Time: 6.9745s
+[2026-05-03 22:26:58] - INFO - Epoch 102: Training Loss: 282.7612, Time: 6.9745s
+[2026-05-03 22:27:05] - INFO - Epoch 103, Time: 6.8472s
+[2026-05-03 22:27:05] - INFO - Epoch 103: Training Loss: 282.7104, Time: 6.8472s
+[2026-05-03 22:27:12] - INFO - Epoch 104, Time: 7.3997s
+[2026-05-03 22:27:12] - INFO - Epoch 104: Training Loss: 282.6513, Time: 7.3997s
+[2026-05-03 22:27:20] - INFO - Epoch 105, Time: 7.4655s
+[2026-05-03 22:27:46] - INFO - Testing - epoch: 105, testing time(s): 26.0696, Loss: 282.5848
+[2026-05-03 22:27:46] - INFO - 		ndcg@5: 0.0246 ; ndcg@10: 0.0304 ; ndcg@20: 0.0388 ; ndcg@50: 0.0548
+[2026-05-03 22:27:46] - INFO - 		recall@5: 0.0236 ; recall@10: 0.0383 ; recall@20: 0.0616 ; recall@50: 0.1163
+[2026-05-03 22:27:46] - INFO - 		precision@5: 0.0186 ; precision@10: 0.0150 ; precision@20: 0.0120 ; precision@50: 0.0089
+[2026-05-03 22:27:46] - INFO - 		hit_ratio@5: 0.0867 ; hit_ratio@10: 0.1344 ; hit_ratio@20: 0.2044 ; hit_ratio@50: 0.3446
+[2026-05-03 22:28:09] - INFO - Validation - epoch: 105, validation time(s): 23.1079, Loss: 282.5848
+[2026-05-03 22:28:09] - INFO - 		ndcg@5: 0.0158 ; ndcg@10: 0.0207 ; ndcg@20: 0.0268 ; ndcg@50: 0.0378
+[2026-05-03 22:28:09] - INFO - 		recall@5: 0.0238 ; recall@10: 0.0385 ; recall@20: 0.0618 ; recall@50: 0.1143
+[2026-05-03 22:28:09] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0050 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:28:09] - INFO - 		hit_ratio@5: 0.0312 ; hit_ratio@10: 0.0490 ; hit_ratio@20: 0.0771 ; hit_ratio@50: 0.1387
+[2026-05-03 22:28:16] - INFO - Epoch 106, Time: 6.5070s
+[2026-05-03 22:28:16] - INFO - Epoch 106: Training Loss: 282.5996, Time: 6.5070s
+[2026-05-03 22:28:23] - INFO - Epoch 107, Time: 6.8611s
+[2026-05-03 22:28:23] - INFO - Epoch 107: Training Loss: 282.5261, Time: 6.8611s
+[2026-05-03 22:28:30] - INFO - Epoch 108, Time: 6.8568s
+[2026-05-03 22:28:30] - INFO - Epoch 108: Training Loss: 282.5461, Time: 6.8568s
+[2026-05-03 22:28:37] - INFO - Epoch 109, Time: 7.0486s
+[2026-05-03 22:28:37] - INFO - Epoch 109: Training Loss: 282.4753, Time: 7.0486s
+[2026-05-03 22:28:45] - INFO - Epoch 110, Time: 7.5135s
+[2026-05-03 22:29:11] - INFO - Testing - epoch: 110, testing time(s): 26.1977, Loss: 282.4641
+[2026-05-03 22:29:11] - INFO - 		ndcg@5: 0.0245 ; ndcg@10: 0.0303 ; ndcg@20: 0.0387 ; ndcg@50: 0.0547
+[2026-05-03 22:29:11] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0382 ; recall@20: 0.0616 ; recall@50: 0.1161
+[2026-05-03 22:29:11] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:29:11] - INFO - 		hit_ratio@5: 0.0864 ; hit_ratio@10: 0.1339 ; hit_ratio@20: 0.2040 ; hit_ratio@50: 0.3440
+[2026-05-03 22:29:34] - INFO - Validation - epoch: 110, validation time(s): 23.4834, Loss: 282.4641
+[2026-05-03 22:29:34] - INFO - 		ndcg@5: 0.0157 ; ndcg@10: 0.0206 ; ndcg@20: 0.0269 ; ndcg@50: 0.0378
+[2026-05-03 22:29:34] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0381 ; recall@20: 0.0620 ; recall@50: 0.1144
+[2026-05-03 22:29:34] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0050 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:29:34] - INFO - 		hit_ratio@5: 0.0309 ; hit_ratio@10: 0.0487 ; hit_ratio@20: 0.0771 ; hit_ratio@50: 0.1390
+[2026-05-03 22:29:41] - INFO - Epoch 111, Time: 6.6112s
+[2026-05-03 22:29:41] - INFO - Epoch 111: Training Loss: 282.3927, Time: 6.6112s
+[2026-05-03 22:29:48] - INFO - Epoch 112, Time: 6.8969s
+[2026-05-03 22:29:48] - INFO - Epoch 112: Training Loss: 282.3757, Time: 6.8969s
+[2026-05-03 22:29:55] - INFO - Epoch 113, Time: 6.8554s
+[2026-05-03 22:29:55] - INFO - Epoch 113: Training Loss: 282.4157, Time: 6.8554s
+[2026-05-03 22:30:02] - INFO - Epoch 114, Time: 6.9192s
+[2026-05-03 22:30:02] - INFO - Epoch 114: Training Loss: 282.3116, Time: 6.9192s
+[2026-05-03 22:30:10] - INFO - Epoch 115, Time: 7.5478s
+[2026-05-03 22:30:36] - INFO - Testing - epoch: 115, testing time(s): 25.9966, Loss: 282.2887
+[2026-05-03 22:30:36] - INFO - 		ndcg@5: 0.0243 ; ndcg@10: 0.0301 ; ndcg@20: 0.0386 ; ndcg@50: 0.0545
+[2026-05-03 22:30:36] - INFO - 		recall@5: 0.0232 ; recall@10: 0.0380 ; recall@20: 0.0615 ; recall@50: 0.1157
+[2026-05-03 22:30:36] - INFO - 		precision@5: 0.0184 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:30:36] - INFO - 		hit_ratio@5: 0.0860 ; hit_ratio@10: 0.1331 ; hit_ratio@20: 0.2034 ; hit_ratio@50: 0.3438
+[2026-05-03 22:30:59] - INFO - Validation - epoch: 115, validation time(s): 23.1424, Loss: 282.2887
+[2026-05-03 22:30:59] - INFO - 		ndcg@5: 0.0157 ; ndcg@10: 0.0205 ; ndcg@20: 0.0268 ; ndcg@50: 0.0377
+[2026-05-03 22:30:59] - INFO - 		recall@5: 0.0232 ; recall@10: 0.0377 ; recall@20: 0.0617 ; recall@50: 0.1140
+[2026-05-03 22:30:59] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0050 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:30:59] - INFO - 		hit_ratio@5: 0.0305 ; hit_ratio@10: 0.0482 ; hit_ratio@20: 0.0767 ; hit_ratio@50: 0.1385
+[2026-05-03 22:31:06] - INFO - Epoch 116, Time: 6.8385s
+[2026-05-03 22:31:06] - INFO - Epoch 116: Training Loss: 282.2796, Time: 6.8385s
+[2026-05-03 22:31:13] - INFO - Epoch 117, Time: 6.9864s
+[2026-05-03 22:31:13] - INFO - Epoch 117: Training Loss: 282.2218, Time: 6.9864s
+[2026-05-03 22:31:20] - INFO - Epoch 118, Time: 6.8119s
+[2026-05-03 22:31:20] - INFO - Epoch 118: Training Loss: 282.2361, Time: 6.8119s
+[2026-05-03 22:31:27] - INFO - Epoch 119, Time: 6.9147s
+[2026-05-03 22:31:27] - INFO - Epoch 119: Training Loss: 282.2210, Time: 6.9147s
+[2026-05-03 22:31:35] - INFO - Epoch 120, Time: 7.5007s
+[2026-05-03 22:32:01] - INFO - Testing - epoch: 120, testing time(s): 26.1348, Loss: 282.2292
+[2026-05-03 22:32:01] - INFO - 		ndcg@5: 0.0244 ; ndcg@10: 0.0302 ; ndcg@20: 0.0387 ; ndcg@50: 0.0545
+[2026-05-03 22:32:01] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0381 ; recall@20: 0.0616 ; recall@50: 0.1155
+[2026-05-03 22:32:01] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0088
+[2026-05-03 22:32:01] - INFO - 		hit_ratio@5: 0.0862 ; hit_ratio@10: 0.1338 ; hit_ratio@20: 0.2039 ; hit_ratio@50: 0.3433
+[2026-05-03 22:32:24] - INFO - Validation - epoch: 120, validation time(s): 23.5307, Loss: 282.2292
+[2026-05-03 22:32:24] - INFO - 		ndcg@5: 0.0156 ; ndcg@10: 0.0205 ; ndcg@20: 0.0269 ; ndcg@50: 0.0377
+[2026-05-03 22:32:24] - INFO - 		recall@5: 0.0230 ; recall@10: 0.0376 ; recall@20: 0.0618 ; recall@50: 0.1138
+[2026-05-03 22:32:24] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0049 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:32:24] - INFO - 		hit_ratio@5: 0.0304 ; hit_ratio@10: 0.0481 ; hit_ratio@20: 0.0770 ; hit_ratio@50: 0.1383
+[2026-05-03 22:32:31] - INFO - Epoch 121, Time: 6.8517s
+[2026-05-03 22:32:31] - INFO - Epoch 121: Training Loss: 282.1665, Time: 6.8517s
+[2026-05-03 22:32:38] - INFO - Epoch 122, Time: 6.9515s
+[2026-05-03 22:32:38] - INFO - Epoch 122: Training Loss: 282.1492, Time: 6.9515s
+[2026-05-03 22:32:45] - INFO - Epoch 123, Time: 6.8825s
+[2026-05-03 22:32:45] - INFO - Epoch 123: Training Loss: 282.0843, Time: 6.8825s
+[2026-05-03 22:32:53] - INFO - Epoch 124, Time: 7.4061s
+[2026-05-03 22:32:53] - INFO - Epoch 124: Training Loss: 282.0953, Time: 7.4061s
+[2026-05-03 22:33:00] - INFO - Epoch 125, Time: 7.3703s
+[2026-05-03 22:33:27] - INFO - Testing - epoch: 125, testing time(s): 26.6512, Loss: 282.0620
+[2026-05-03 22:33:27] - INFO - 		ndcg@5: 0.0245 ; ndcg@10: 0.0302 ; ndcg@20: 0.0387 ; ndcg@50: 0.0546
+[2026-05-03 22:33:27] - INFO - 		recall@5: 0.0235 ; recall@10: 0.0381 ; recall@20: 0.0614 ; recall@50: 0.1157
+[2026-05-03 22:33:27] - INFO - 		precision@5: 0.0186 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0089
+[2026-05-03 22:33:27] - INFO - 		hit_ratio@5: 0.0867 ; hit_ratio@10: 0.1337 ; hit_ratio@20: 0.2035 ; hit_ratio@50: 0.3440
+[2026-05-03 22:33:50] - INFO - Validation - epoch: 125, validation time(s): 23.3740, Loss: 282.0620
+[2026-05-03 22:33:50] - INFO - 		ndcg@5: 0.0156 ; ndcg@10: 0.0205 ; ndcg@20: 0.0267 ; ndcg@50: 0.0378
+[2026-05-03 22:33:50] - INFO - 		recall@5: 0.0232 ; recall@10: 0.0380 ; recall@20: 0.0616 ; recall@50: 0.1148
+[2026-05-03 22:33:50] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0050 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:33:50] - INFO - 		hit_ratio@5: 0.0305 ; hit_ratio@10: 0.0485 ; hit_ratio@20: 0.0767 ; hit_ratio@50: 0.1396
+[2026-05-03 22:33:57] - INFO - Epoch 126, Time: 6.8936s
+[2026-05-03 22:33:57] - INFO - Epoch 126: Training Loss: 282.0487, Time: 6.8936s
+[2026-05-03 22:34:04] - INFO - Epoch 127, Time: 6.9924s
+[2026-05-03 22:34:04] - INFO - Epoch 127: Training Loss: 282.0092, Time: 6.9924s
+[2026-05-03 22:34:12] - INFO - Epoch 128, Time: 7.3677s
+[2026-05-03 22:34:12] - INFO - Epoch 128: Training Loss: 282.0783, Time: 7.3677s
+[2026-05-03 22:34:19] - INFO - Epoch 129, Time: 7.1138s
+[2026-05-03 22:34:19] - INFO - Epoch 129: Training Loss: 282.0073, Time: 7.1138s
+[2026-05-03 22:34:26] - INFO - Epoch 130, Time: 6.9242s
+[2026-05-03 22:34:54] - INFO - Testing - epoch: 130, testing time(s): 27.4733, Loss: 282.0212
+[2026-05-03 22:34:54] - INFO - 		ndcg@5: 0.0245 ; ndcg@10: 0.0302 ; ndcg@20: 0.0387 ; ndcg@50: 0.0543
+[2026-05-03 22:34:54] - INFO - 		recall@5: 0.0236 ; recall@10: 0.0380 ; recall@20: 0.0614 ; recall@50: 0.1148
+[2026-05-03 22:34:54] - INFO - 		precision@5: 0.0186 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0088
+[2026-05-03 22:34:54] - INFO - 		hit_ratio@5: 0.0870 ; hit_ratio@10: 0.1332 ; hit_ratio@20: 0.2034 ; hit_ratio@50: 0.3415
+[2026-05-03 22:35:17] - INFO - Validation - epoch: 130, validation time(s): 23.4942, Loss: 282.0212
+[2026-05-03 22:35:17] - INFO - 		ndcg@5: 0.0157 ; ndcg@10: 0.0205 ; ndcg@20: 0.0270 ; ndcg@50: 0.0378
+[2026-05-03 22:35:17] - INFO - 		recall@5: 0.0233 ; recall@10: 0.0377 ; recall@20: 0.0627 ; recall@50: 0.1144
+[2026-05-03 22:35:17] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0050 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:35:17] - INFO - 		hit_ratio@5: 0.0306 ; hit_ratio@10: 0.0482 ; hit_ratio@20: 0.0780 ; hit_ratio@50: 0.1392
+[2026-05-03 22:35:25] - INFO - Epoch 131, Time: 7.4953s
+[2026-05-03 22:35:25] - INFO - Epoch 131: Training Loss: 281.9846, Time: 7.4953s
+[2026-05-03 22:35:32] - INFO - Epoch 132, Time: 7.5836s
+[2026-05-03 22:35:32] - INFO - Epoch 132: Training Loss: 281.9608, Time: 7.5836s
+[2026-05-03 22:35:40] - INFO - Epoch 133, Time: 6.9498s
+[2026-05-03 22:35:40] - INFO - Epoch 133: Training Loss: 281.9530, Time: 6.9498s
+[2026-05-03 22:35:47] - INFO - Epoch 134, Time: 6.8733s
+[2026-05-03 22:35:47] - INFO - Epoch 134: Training Loss: 281.9130, Time: 6.8733s
+[2026-05-03 22:35:54] - INFO - Epoch 135, Time: 6.9154s
+[2026-05-03 22:36:21] - INFO - Testing - epoch: 135, testing time(s): 27.5483, Loss: 281.9346
+[2026-05-03 22:36:21] - INFO - 		ndcg@5: 0.0244 ; ndcg@10: 0.0301 ; ndcg@20: 0.0387 ; ndcg@50: 0.0544
+[2026-05-03 22:36:21] - INFO - 		recall@5: 0.0234 ; recall@10: 0.0379 ; recall@20: 0.0616 ; recall@50: 0.1153
+[2026-05-03 22:36:21] - INFO - 		precision@5: 0.0185 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0088
+[2026-05-03 22:36:21] - INFO - 		hit_ratio@5: 0.0862 ; hit_ratio@10: 0.1334 ; hit_ratio@20: 0.2038 ; hit_ratio@50: 0.3420
+[2026-05-03 22:36:45] - INFO - Validation - epoch: 135, validation time(s): 24.0380, Loss: 281.9346
+[2026-05-03 22:36:45] - INFO - 		ndcg@5: 0.0156 ; ndcg@10: 0.0204 ; ndcg@20: 0.0268 ; ndcg@50: 0.0376
+[2026-05-03 22:36:45] - INFO - 		recall@5: 0.0230 ; recall@10: 0.0375 ; recall@20: 0.0619 ; recall@50: 0.1135
+[2026-05-03 22:36:45] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0049 ; precision@20: 0.0041 ; precision@50: 0.0030
+[2026-05-03 22:36:45] - INFO - 		hit_ratio@5: 0.0303 ; hit_ratio@10: 0.0479 ; hit_ratio@20: 0.0773 ; hit_ratio@50: 0.1383
+[2026-05-03 22:36:53] - INFO - Epoch 136, Time: 7.4354s
+[2026-05-03 22:36:53] - INFO - Epoch 136: Training Loss: 281.9461, Time: 7.4354s
+[2026-05-03 22:37:00] - INFO - Epoch 137, Time: 6.9312s
+[2026-05-03 22:37:00] - INFO - Epoch 137: Training Loss: 281.9215, Time: 6.9312s
+[2026-05-03 22:37:07] - INFO - Epoch 138, Time: 6.8761s
+[2026-05-03 22:37:07] - INFO - Epoch 138: Training Loss: 281.9006, Time: 6.8761s
+[2026-05-03 22:37:14] - INFO - Epoch 139, Time: 6.9061s
+[2026-05-03 22:37:14] - INFO - Epoch 139: Training Loss: 281.8604, Time: 6.9061s
+[2026-05-03 22:37:21] - INFO - Epoch 140, Time: 6.9637s
+[2026-05-03 22:37:50] - INFO - Testing - epoch: 140, testing time(s): 28.8876, Loss: 281.8740
+[2026-05-03 22:37:50] - INFO - 		ndcg@5: 0.0244 ; ndcg@10: 0.0302 ; ndcg@20: 0.0388 ; ndcg@50: 0.0544
+[2026-05-03 22:37:50] - INFO - 		recall@5: 0.0233 ; recall@10: 0.0380 ; recall@20: 0.0617 ; recall@50: 0.1151
+[2026-05-03 22:37:50] - INFO - 		precision@5: 0.0184 ; precision@10: 0.0149 ; precision@20: 0.0120 ; precision@50: 0.0088
+[2026-05-03 22:37:50] - INFO - 		hit_ratio@5: 0.0860 ; hit_ratio@10: 0.1331 ; hit_ratio@20: 0.2045 ; hit_ratio@50: 0.3410
+[2026-05-03 22:38:14] - INFO - Validation - epoch: 140, validation time(s): 23.9283, Loss: 281.8740
+[2026-05-03 22:38:14] - INFO - 		ndcg@5: 0.0158 ; ndcg@10: 0.0206 ; ndcg@20: 0.0271 ; ndcg@50: 0.0376
+[2026-05-03 22:38:14] - INFO - 		recall@5: 0.0233 ; recall@10: 0.0377 ; recall@20: 0.0623 ; recall@50: 0.1130
+[2026-05-03 22:38:14] - INFO - 		precision@5: 0.0063 ; precision@10: 0.0050 ; precision@20: 0.0041 ; precision@50: 0.0029
+[2026-05-03 22:38:14] - INFO - 		hit_ratio@5: 0.0307 ; hit_ratio@10: 0.0483 ; hit_ratio@20: 0.0778 ; hit_ratio@50: 0.1375
+[2026-05-03 22:38:21] - INFO - Epoch 141, Time: 6.8533s
+[2026-05-03 22:38:21] - INFO - Epoch 141: Training Loss: 281.8210, Time: 6.8533s
+[2026-05-03 22:38:28] - INFO - Epoch 142, Time: 6.9895s
+[2026-05-03 22:38:28] - INFO - Epoch 142: Training Loss: 281.8392, Time: 6.9895s
+[2026-05-03 22:38:35] - INFO - Epoch 143, Time: 6.9560s
+[2026-05-03 22:38:35] - INFO - Epoch 143: Training Loss: 281.8148, Time: 6.9560s
+[2026-05-03 22:38:42] - INFO - Epoch 144, Time: 7.2375s
+[2026-05-03 22:38:42] - INFO - Epoch 144: Training Loss: 281.8119, Time: 7.2375s
+[2026-05-03 22:38:50] - INFO - Epoch 145, Time: 7.6180s
+[2026-05-03 22:39:17] - INFO - Testing - epoch: 145, testing time(s): 26.4192, Loss: 281.7725
+[2026-05-03 22:39:17] - INFO - 		ndcg@5: 0.0246 ; ndcg@10: 0.0303 ; ndcg@20: 0.0387 ; ndcg@50: 0.0544
+[2026-05-03 22:39:17] - INFO - 		recall@5: 0.0235 ; recall@10: 0.0380 ; recall@20: 0.0614 ; recall@50: 0.1150
+[2026-05-03 22:39:17] - INFO - 		precision@5: 0.0186 ; precision@10: 0.0149 ; precision@20: 0.0119 ; precision@50: 0.0088
+[2026-05-03 22:39:17] - INFO - 		hit_ratio@5: 0.0865 ; hit_ratio@10: 0.1338 ; hit_ratio@20: 0.2042 ; hit_ratio@50: 0.3404
+[2026-05-03 22:39:40] - INFO - Validation - epoch: 145, validation time(s): 23.5126, Loss: 281.7725
+[2026-05-03 22:39:40] - INFO - 		ndcg@5: 0.0157 ; ndcg@10: 0.0205 ; ndcg@20: 0.0269 ; ndcg@50: 0.0377
+[2026-05-03 22:39:40] - INFO - 		recall@5: 0.0231 ; recall@10: 0.0376 ; recall@20: 0.0617 ; recall@50: 0.1136
+[2026-05-03 22:39:40] - INFO - 		precision@5: 0.0062 ; precision@10: 0.0050 ; precision@20: 0.0040 ; precision@50: 0.0030
+[2026-05-03 22:39:40] - INFO - 		hit_ratio@5: 0.0303 ; hit_ratio@10: 0.0482 ; hit_ratio@20: 0.0771 ; hit_ratio@50: 0.1380
+[2026-05-03 22:39:40] - INFO - Early stopping is trigger at step: 10 log:0.020503321581859635
+[2026-05-03 22:39:40] - INFO - Early stopping at epoch 145
+[2026-05-03 22:39:40] - INFO - ############################## Epoch Time Statistics ##############################
+[2026-05-03 22:39:40] - INFO - Average epoch time: 6.83s (over 146 epochs)
+[2026-05-03 22:39:40] - INFO - Shortest epoch time: 6.47s (epoch 53)
+[2026-05-03 22:39:40] - INFO - Longest epoch time: 7.62s (epoch 145)
+[2026-05-03 22:39:40] - INFO - Best performance achieved at epoch 95:
+[2026-05-03 22:39:40] - INFO -   valid set ndcg@10: 0.0210
+[2026-05-03 22:39:40] - INFO -   ndcg@5: 0.0243, ndcg@10: 0.0302, ndcg@20: 0.0385, ndcg@50: 0.0547
+[2026-05-03 22:39:40] - INFO -   recall@5: 0.0235, recall@10: 0.0385, recall@20: 0.0612, recall@50: 0.1166
+[2026-05-03 22:39:40] - INFO -   precision@5: 0.0185, precision@10: 0.0150, precision@20: 0.0119, precision@50: 0.0089
+[2026-05-03 22:39:40] - INFO -   hit_ratio@5: 0.0864, hit_ratio@10: 0.1347, hit_ratio@20: 0.2029, hit_ratio@50: 0.3454

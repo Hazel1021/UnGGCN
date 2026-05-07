@@ -36,14 +36,11 @@ sweep_config = {
     },
     'parameters': {
         'beta':{
-            'values':[0.6]
+            'values':[0.7]
         },
-        'noise_ratio':{
-            'values':[0.0,0.3,0.5]
+        'lw': {
+            'values': [0.001,0.01,0.1,0.5,1.0]
         },
-        'lr':{
-            'values':[0.01]
-        }
     },
     'early_terminate': {
         'type': 'hyperband',
@@ -86,7 +83,7 @@ def init_logger(args,sweep_id=None):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     sweep_suffix = f'_sweep_{sweep_id}' if sweep_id else ''
-    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_beta_{args.beta}_ratingvar_noise_{args.noise_ratio}_0205_{sweep_suffix}.txt'
+    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_beta_{args.beta}_ratingvar_noise_{args.noise_ratio}_0503_{sweep_suffix}.txt'
     filepath = os.path.join(out_dir, filename)
 
     logger = logging.getLogger()
@@ -140,6 +137,8 @@ def train(use_sweep=False):
             args.logsigma = config.logsigma
         if hasattr(config, 'dim'):
             args.dim = config.dim
+        if hasattr(config, 'lw'):
+            args.lw = config.lw
             
         wandb.config.update(vars(args), allow_val_change=True)
         
@@ -149,7 +148,7 @@ def train(use_sweep=False):
         wandb.login()
         wandb.init(
             project="UnGGCN",
-            name=f"{args.dataset}_hops{args.context_hops}_beta{args.beta}_noise{args.noise_ratio}_beta{args.beta}_dim{args.dim}_disable_ump{args.disable_ump}",
+            name=f"{args.dataset}_hops{args.context_hops}_beta{args.beta}_noise{args.noise_ratio}_beta{args.beta}_dim{args.dim}",
             config=vars(args),
             notes="UnGGCN Experiment"
         )
