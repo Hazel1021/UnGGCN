@@ -1,4 +1,28 @@
 import argparse
+import ast
+
+
+def str2bool(value):
+    if isinstance(value, bool):
+        return value
+    value = value.lower()
+    if value in ("yes", "true", "t", "1", "y"):
+        return True
+    if value in ("no", "false", "f", "0", "n"):
+        return False
+    raise argparse.ArgumentTypeError("Boolean value expected.")
+
+
+def parse_ks(value):
+    if isinstance(value, (list, tuple)):
+        return [int(k) for k in value]
+    try:
+        parsed = ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        parsed = [int(k) for k in value.split(",")]
+    if isinstance(parsed, int):
+        parsed = [parsed]
+    return [int(k) for k in parsed]
 
 
 def parse_args():
@@ -19,15 +43,15 @@ def parse_args():
     parser.add_argument('--test_batch_size', type=int, default=2048, help='batch size in evaluation phase')
     parser.add_argument('--dim', type=int, default=64, help='embedding size')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
-    parser.add_argument("--batch_test_flag", type=bool, default=True, help="use gpu or not")
+    parser.add_argument("--batch_test_flag", type=str2bool, default=True, help="use batched item evaluation or not")
     parser.add_argument("--lw", type=float, default=1.0, help="weight of normal-gamma-loss")
 
     parser.add_argument("--K", type=int, default=1, help="number of negative in K-pair loss")
 
     parser.add_argument("--n_negs", type=int, default=1, help="number of candidate negative")
-    parser.add_argument("--cuda", type=bool, default=True, help="use gpu or not")
+    parser.add_argument("--cuda", type=str2bool, default=True, help="use gpu or not")
     parser.add_argument("--gpu_id", type=int, default=5, help="gpu id")
-    parser.add_argument('--Ks', nargs='?', default='[5,10,20,50]',
+    parser.add_argument('--Ks', nargs='?', default='[10,20]',
                         help='K of ndcg@K, recall@K')
     parser.add_argument('--test_flag', nargs='?', default='part',
                         help='Specify the test type from {part, full}, indicating whether the reference is done in mini-batch')
@@ -40,16 +64,10 @@ def parse_args():
     parser.add_argument("--disable_ump", action="store_true",default=False,
                         help="disable uncertainty-guided message passing for ablation")
     # ===== save model ===== #
-    parser.add_argument("--save", type=bool, default=True, help="save model or not")
+    parser.add_argument("--save", type=str2bool, default=True, help="save model or not")
     parser.add_argument(
         "--out_dir", type=str, default="./recordings/", help="output directory "
     )
     parser.add_argument(
         "--model_dir", type=str, default="./models/", help="dir for saving")
-    
-     # ===== sweep ===== #
-    parser.add_argument('--sweep', action='store_true', help='hyperparameter sweep')
-    parser.add_argument('--agent', type=str, default=None, help='add to current sweep agent')
-    parser.add_argument('--count', type=int, default=10, help='sweep experiments count')
-    
     return parser.parse_args()

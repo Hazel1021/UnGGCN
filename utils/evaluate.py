@@ -1,5 +1,5 @@
 from .metrics import *
-from .parser import parse_args
+from .parser import parse_args, parse_ks
 
 import random
 import torch
@@ -13,7 +13,7 @@ import os
 cores = multiprocessing.cpu_count() // 2
 
 args = parse_args()
-Ks = eval(args.Ks)
+Ks = parse_ks(args.Ks)
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu_id)
  # CUDA
@@ -205,4 +205,3 @@ def test(model, user_dict, n_params, mode='test'):
 
     
     return result
-

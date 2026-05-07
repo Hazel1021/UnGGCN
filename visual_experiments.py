@@ -58,7 +58,7 @@ def checkpoint_candidates(model_dir, dataset, noise_ratio, dim, context_hops, be
 
     pattern = re.compile(
         rf"^model_dataset_{re.escape(dataset)}_noise_([^_]+)_dim(\d+)_hops(\d+)"
-        rf"_beta([^_]+)_lr([^_]+?)(?:(_noatt)|_sweep_[^.]*)?\.ckpt$"
+        rf"_beta([^_]+)_lr([^_]+?)(?:(_noatt))?\.ckpt$"
     )
     matches = []
     if model_dir.is_dir():

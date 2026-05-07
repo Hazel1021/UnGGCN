@@ -32,6 +32,7 @@ class UnGGSL(nn.Module):
         self.n_negs = args_config.n_negs  
         self.K = args_config.K
         self.context_hops = args_config.context_hops
+        self.lw = args_config.lw
         self.logger = logger
         self.beta = args_config.beta
         self.disable_ump = getattr(args_config, "disable_ump", False)
@@ -189,7 +190,7 @@ class UnGGSL(nn.Module):
 
         prior_loss = -(prior_term1 + prior_term2).mean()  
         
-        total_loss = ranking_loss +  prior_loss
+        total_loss = ranking_loss +  self.lw *prior_loss
         loss_e_t= time()
         loss_time=loss_e_t-loss_s_t
 
