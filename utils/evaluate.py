@@ -1,83 +1,20 @@
 from .metrics import *
-from .parser import parse_args, parse_ks
+from .parser import parse_ks
 
-import random
 import torch
-import math
 import numpy as np
 import multiprocessing
-import heapq
-from time import time
-import os
 
 cores = multiprocessing.cpu_count() // 2
 
-args = parse_args()
-Ks = parse_ks(args.Ks)
-
-os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu_id)
- # CUDA
-if args.cuda and not torch.cuda.is_available():
-    print("[warning] CUDA unavailable。")
-    args.cuda = False
-device = torch.device("cuda:0") if args.cuda else torch.device("cpu")
-BATCH_SIZE = args.test_batch_size
-batch_test_flag = args.batch_test_flag
+Ks = [10, 20]
+test_flag = 'part'
+BATCH_SIZE = 2048
+batch_test_flag = True
+device = torch.device("cpu")
 
 
-def ranklist_by_heapq(user_pos_test, test_items, rating, Ks):
-    item_score = {}
-    for i in test_items:
-        item_score[i] = rating[i]
-
-    K_max = max(Ks)
-    K_max_item_score = heapq.nlargest(K_max, item_score, key=item_score.get)
-
-    r = []
-    for i in K_max_item_score:
-        if i in user_pos_test:
-            r.append(1)
-        else:
-            r.append(0)
-    auc = 0. 
-    return r, auc
-
-
-def get_auc(item_score, user_pos_test):
-    item_score = sorted(item_score.items(), key=lambda kv: kv[1])
-    item_score.reverse()
-    item_sort = [x[0] for x in item_score]
-    posterior = [x[1] for x in item_score]
-
-    r = []
-    for i in item_sort:
-        if i in user_pos_test:
-            r.append(1)
-        else:
-            r.append(0)
-    auc = AUC(ground_truth=r, prediction=posterior)
-    return auc
-
-
-def ranklist_by_sorted(user_pos_test, test_items, rating, Ks):
-    item_score = {}
-    for i in test_items:
-        item_score[i] = rating[i]
-
-    K_max = max(Ks)
-    K_max_item_score = heapq.nlargest(K_max, item_score, key=item_score.get)
-
-    r = []
-    for i in K_max_item_score:
-        if i in user_pos_test:
-            r.append(1)
-        else:
-            r.append(0)
-    auc = get_auc(item_score, user_pos_test)
-    return r, auc
-
-
-def get_performance(user_pos_test, r, auc, Ks):
+def get_performance(user_pos_test, r, Ks):
     precision, recall, ndcg, hit_ratio = [], [], [], []
 
     for K in Ks:
@@ -87,40 +24,23 @@ def get_performance(user_pos_test, r, auc, Ks):
         hit_ratio.append(hit_at_k(r, K))
 
     return {'recall': np.array(recall), 'precision': np.array(precision),
-            'ndcg': np.array(ndcg), 'hit_ratio': np.array(hit_ratio), 'auc': auc}
+        'ndcg': np.array(ndcg), 'hit_ratio': np.array(hit_ratio)}
 
 
-def test_one_user(x):
-    # user u's ratings for user u
-    rating = x[0]
-    # uid
-    u = x[1]
-    # user u's items in the training set
-    try:
-        training_items = train_user_set[u]
-    except Exception:
-        training_items = []
+@torch.no_grad()
+def test(model, user_dict, n_params, mode='test', eval_args=None):
+    global Ks, test_flag, BATCH_SIZE, batch_test_flag, device
+    if eval_args is not None:
+        Ks = parse_ks(eval_args.Ks)
+        test_flag = eval_args.test_flag
+        BATCH_SIZE = eval_args.test_batch_size
+        batch_test_flag = eval_args.batch_test_flag
+    device = next(model.parameters()).device
 
-    # user u's items in the test set
-    user_pos_test = test_user_set[u]
-
-    all_items = set(range(0, n_items))
-    test_items = list(all_items - set(training_items))
-
-    if args.test_flag == 'part':
-        r, auc = ranklist_by_heapq(user_pos_test, test_items, rating, Ks)
-    else:
-        r, auc = ranklist_by_sorted(user_pos_test, test_items, rating, Ks)
-
-    return get_performance(user_pos_test, r, auc, Ks)
-
-
-def test(model, user_dict, n_params, mode='test'):
     result = {'precision': np.zeros(len(Ks)),
               'recall': np.zeros(len(Ks)),
               'ndcg': np.zeros(len(Ks)),
-              'hit_ratio': np.zeros(len(Ks)),
-              'auc': 0.}
+              'hit_ratio': np.zeros(len(Ks))}
 
     global n_users, n_items
     n_items = n_params['n_items']
@@ -137,61 +57,43 @@ def test(model, user_dict, n_params, mode='test'):
 
     
     
-    u_batch_size = BATCH_SIZE
-    i_batch_size = BATCH_SIZE
-
     test_users = list(test_user_set.keys())
     n_test_users = len(test_users)
-    n_user_batchs = n_test_users // u_batch_size + 1
+    n_user_batchs = (n_test_users + BATCH_SIZE - 1) // BATCH_SIZE
 
     count = 0
 
-    user_mean,item_mean ,user_var,item_var = model.generate()
+    user_mean, item_mean, user_var, item_var = model.generate()
+    max_k = max(Ks)
 
     for u_batch_id in range(n_user_batchs):
-        start = u_batch_id * u_batch_size
-        end = (u_batch_id + 1) * u_batch_size
+        start = u_batch_id * BATCH_SIZE
+        end = min((u_batch_id + 1) * BATCH_SIZE, n_test_users)
 
         user_list_batch = test_users[start:end]
-        user_batch = torch.LongTensor(np.array(user_list_batch)).to(device)
+        if len(user_list_batch) == 0:
+            continue
+
+        user_batch = torch.LongTensor(user_list_batch).to(device)
         u_mean = user_mean[user_batch]
         u_var = user_var[user_batch]
 
-        if batch_test_flag:
-            # batch-item test
-            n_item_batchs = n_items // i_batch_size + 1
-            rate_batch = np.zeros(shape=(len(user_batch), n_items))
+        rate_batch = model.rating(u_mean, u_var, item_mean, item_var)
 
-            i_count = 0
-            for i_batch_id in range(n_item_batchs):
-                i_start = i_batch_id * i_batch_size
-                i_end = min((i_batch_id + 1) * i_batch_size, n_items)
+        for row, user in enumerate(user_list_batch):
+            training_items = train_user_set.get(user, [])
+            if len(training_items) > 0:
+                rate_batch[row, list(training_items)] = -float('inf')
 
-                item_batch = torch.LongTensor(np.array(range(i_start, i_end))).view(i_end-i_start).to(device)
-                i_mean = item_mean[item_batch]
-                i_var = item_var[item_batch]
-            
-                i_rate_batch = model.rating(u_mean, u_var, i_mean, i_var).detach().cpu()
-       
+        _, topk_indices = torch.topk(rate_batch, max_k, dim=1)
+        topk_indices = topk_indices.cpu().numpy()
 
-                rate_batch[:, i_start:i_end] = i_rate_batch
-                i_count += i_rate_batch.shape[1]
+        batch_result = []
+        for row, user in enumerate(user_list_batch):
+            user_pos_test = test_user_set[user]
+            r = np.isin(topk_indices[row], list(user_pos_test)).astype(np.int32).tolist()
+            batch_result.append(get_performance(user_pos_test, r, Ks))
 
-            assert i_count == n_items
-        else:
-            # all-item test
-            item_batch = torch.LongTensor(np.array(range(0, n_items))).view(n_items, -1).to(device)
-
-            i_mean = item_mean[item_batch]
-            i_var = item_var[item_batch]
-            
-            rate_batch = model.rating(u_mean, u_var, i_mean, i_var).detach().cpu()
-       
-    
-
-        user_batch_rating_uid = zip(rate_batch, user_list_batch)
-      
-        batch_result = [test_one_user(x) for x in user_batch_rating_uid]
         count += len(batch_result)
 
         for re in batch_result:
@@ -199,7 +101,6 @@ def test(model, user_dict, n_params, mode='test'):
             result['recall'] += re['recall']/n_test_users
             result['ndcg'] += re['ndcg']/n_test_users
             result['hit_ratio'] += re['hit_ratio']/n_test_users
-            result['auc'] += re['auc']/n_test_users
 
     assert count == n_test_users
 

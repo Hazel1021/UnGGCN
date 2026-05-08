@@ -18,7 +18,7 @@ def get_feed_dict(train_entity_pairs, train_pos_set, start, end, n_negs=1):
 
     def sampling(user_item, train_set, n):
         neg_items = []
-        for user, _ in user_item.cpu().numpy():
+        for user, _ in user_item.numpy():
             user = int(user)
             negitems = []
             for i in range(n):  # sample n times
@@ -32,8 +32,8 @@ def get_feed_dict(train_entity_pairs, train_pos_set, start, end, n_negs=1):
 
     feed_dict = {}
     entity_pairs = train_entity_pairs[start:end]
-    feed_dict['users'] = entity_pairs[:, 0]
-    feed_dict['pos_items'] = entity_pairs[:, 1]
+    feed_dict['users'] = entity_pairs[:, 0].to(device)
+    feed_dict['pos_items'] = entity_pairs[:, 1].to(device)
     feed_dict['neg_items'] = torch.LongTensor(sampling(entity_pairs,
                                                         train_pos_set,
                                                         n_negs*K)).to(device)
@@ -127,6 +127,7 @@ def train(train_args=None):
     stopping_step = 0
     best_metrics = {}  # store all metrics for the best epoch
     best_save_path = None
+    best_state_dict = None
     selection_split = 'valid' if user_dict['valid_user_set'] is not None else 'test'
 
     epoch_times = []
@@ -136,19 +137,19 @@ def train(train_args=None):
     
     for epoch in range(args.epoch):
         # shuffle training data
-        train_cf_ = train_cf
-        index = np.arange(len(train_cf_))
+        index = np.arange(len(train_cf))
         np.random.shuffle(index)
-        train_cf_ = train_cf_[index].to(device)
+        train_cf_ = train_cf[index]
 
         """training"""
         model.train()
         loss_value, s = 0.0, 0
         train_s_t = time()
-        while s + args.batch_size <= len(train_cf):
+        while s < len(train_cf):
+            e = min(s + args.batch_size, len(train_cf))
             batch = get_feed_dict(train_cf_,
                                     user_dict['train_user_set'],
-                                    s, s + args.batch_size,
+                                    s, e,
                                     n_negs)
 
             batch_loss, _, _ = model(batch)
@@ -158,7 +159,7 @@ def train(train_args=None):
             optimizer.step()
 
             loss_value += batch_loss.item()
-            s += args.batch_size
+            s = e
         train_e_t = time()
 
         epoch_time = train_e_t - train_s_t
@@ -166,58 +167,34 @@ def train(train_args=None):
         logger.info(f"Epoch {epoch}, Time: {epoch_time:.4f}s")
 
         if epoch % 5 == 0:
-            """testing"""
-
             model.eval()
-            test_s_t = time()
-
-            # user_mean,item_mean,user_var,item_var = model.generate(split = True )
             
-            test_ret = test(model, user_dict, n_params, mode='test')
-            test_e_t = time()
-
-
-            logger.info(f"Testing - epoch: {epoch}, testing time(s): {test_e_t - test_s_t:.4f}, Loss: {loss_value:.4f}")
-
-            
-            ndcg_str = " ; ".join([f"ndcg@{k}: {test_ret['ndcg'][i]:.4f}" for i, k in enumerate(k_values)])
-            logger.info(f"\t\t{ndcg_str}")
-
-            recall_str = " ; ".join([f"recall@{k}: {test_ret['recall'][i]:.4f}" for i, k in enumerate(k_values)])
-            logger.info(f"\t\t{recall_str}")
-
-            precision_str = " ; ".join([f"precision@{k}: {test_ret['precision'][i]:.4f}" for i, k in enumerate(k_values)])
-            logger.info(f"\t\t{precision_str}")
-
-            hit_ratio_str = " ; ".join([f"hit_ratio@{k}: {test_ret['hit_ratio'][i]:.4f}" for i, k in enumerate(k_values)])
-            logger.info(f"\t\t{hit_ratio_str}")
-            
-            """validation"""
             if user_dict['valid_user_set'] is None:
-                valid_ret = test_ret
+                test_s_t = time()
+                valid_ret = test(model, user_dict, n_params, mode='test', eval_args=args)
+                test_e_t = time()
+                logger.info(f"Testing - epoch: {epoch}, testing time(s): {test_e_t - test_s_t:.4f}, Loss: {loss_value:.4f}")
             else:
                 valid_s_t = time()
-                valid_ret = test(model, user_dict, n_params, mode='valid')
+                valid_ret = test(model, user_dict, n_params, mode='valid', eval_args=args)
                 valid_e_t = time()
-
-                # output validation metrics
                 logger.info(f"Validation - epoch: {epoch}, validation time(s): {valid_e_t - valid_s_t:.4f}, Loss: {loss_value:.4f}")
 
-                ndcg_str = " ; ".join([f"ndcg@{k}: {valid_ret['ndcg'][i]:.4f}" for i, k in enumerate(k_values)])
-                logger.info(f"\t\t{ndcg_str}")
+            ndcg_str = " ; ".join([f"ndcg@{k}: {valid_ret['ndcg'][i]:.4f}" for i, k in enumerate(k_values)])
+            logger.info(f"\t\t{ndcg_str}")
 
-                recall_str = " ; ".join([f"recall@{k}: {valid_ret['recall'][i]:.4f}" for i, k in enumerate(k_values)])
-                logger.info(f"\t\t{recall_str}")
+            recall_str = " ; ".join([f"recall@{k}: {valid_ret['recall'][i]:.4f}" for i, k in enumerate(k_values)])
+            logger.info(f"\t\t{recall_str}")
 
-                precision_str = " ; ".join([f"precision@{k}: {valid_ret['precision'][i]:.4f}" for i, k in enumerate(k_values)])
-                logger.info(f"\t\t{precision_str}")
+            precision_str = " ; ".join([f"precision@{k}: {valid_ret['precision'][i]:.4f}" for i, k in enumerate(k_values)])
+            logger.info(f"\t\t{precision_str}")
 
-                hit_ratio_str = " ; ".join([f"hit_ratio@{k}: {valid_ret['hit_ratio'][i]:.4f}" for i, k in enumerate(k_values)])
-                logger.info(f"\t\t{hit_ratio_str}")
+            hit_ratio_str = " ; ".join([f"hit_ratio@{k}: {valid_ret['hit_ratio'][i]:.4f}" for i, k in enumerate(k_values)])
+            logger.info(f"\t\t{hit_ratio_str}")
 
             valid_score = float(valid_ret['ndcg'][0])
-            is_best = valid_score > best_valid_score
-            if is_best:
+
+            if valid_score > best_valid_score:
                 best_valid_score = valid_score
                 best_epoch = epoch
                 stopping_step = 0
@@ -227,11 +204,8 @@ def train(train_args=None):
                     'valid_recall': valid_ret['recall'],
                     'valid_precision': valid_ret['precision'],
                     'valid_hit_ratio': valid_ret['hit_ratio'],
-                    'recall': test_ret['recall'],
-                    'ndcg': test_ret['ndcg'], 
-                    'precision': test_ret['precision'],
-                    'hit_ratio': test_ret['hit_ratio'],
                 }
+                best_state_dict = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
                 if args.save:
                     os.makedirs(args.model_dir, exist_ok=True)
@@ -274,17 +248,21 @@ def train(train_args=None):
             'precision': best_metrics['valid_precision'],
             'hit_ratio': best_metrics['valid_hit_ratio'],
         }
-        test_metrics = {
-            'ndcg': best_metrics['ndcg'],
-            'recall': best_metrics['recall'],
-            'precision': best_metrics['precision'],
-            'hit_ratio': best_metrics['hit_ratio'],
-        }
 
         logger.info('Best model validation performance:')
         for line in format_metrics('valid', valid_metrics, k_values):
             logger.info(line)
 
+        if best_save_path and os.path.exists(best_save_path):
+            model.load_state_dict(torch.load(best_save_path, map_location=device))
+        elif best_state_dict is not None:
+            model.load_state_dict(best_state_dict)
+
+        model.eval()
+        test_s_t = time()
+        test_metrics = test(model, user_dict, n_params, mode='test', eval_args=args)
+        test_e_t = time()
+        logger.info(f"Final test on best model, testing time(s): {test_e_t - test_s_t:.4f}")
         logger.info('Best model test performance:')
         for line in format_metrics('test', test_metrics, k_values):
             logger.info(line)

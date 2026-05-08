@@ -101,7 +101,7 @@ class UnGGSL(nn.Module):
         pos_var = item_var[pos_item]
 
 
-        neg_idx = neg_item[:, :1]
+        neg_idx = neg_item[:, 0]
         neg_mu = item_mu[neg_idx]
         neg_var = item_var[neg_idx]
 
@@ -141,7 +141,7 @@ class UnGGSL(nn.Module):
         # (μ_uk^2 + σ_uk): [batch_size, dim]
         user_term = user_mu.pow(2) + user_var
         
-        # term1 = (σ_ik + σ_jk)(2μ_uk^2 + σ_uk): [batch_size, dim]
+        # term1 = (σ_ik + σ_jk)(μ_uk^2 + σ_uk): [batch_size, dim]
         term1 = var_sum * user_term
         
         # term2 = σ_uk(μ_jk - μ_ik)^2: [batch_size,  dim]
@@ -226,25 +226,14 @@ class UnGGSL(nn.Module):
         Returns:
             score: [n_users, n_items]
         """
-        # E[Y_ui] = μ_u · μ_i
-        # [n_users, dim] @ [dim, n_items] = [n_users, n_items]
-
         E_Y = torch.matmul(user_mu, item_mu.t())
         
         # Var[Y_ui] = Σ_k [σ_uk * σ_ik + σ_uk * μ_ik^2 + μ_uk^2 * σ_ik]
-        # boardcasting
-
-        user_mu_exp = user_mu.unsqueeze(1)           # [n_users, 1, dim]
-        user_var_exp = user_var.unsqueeze(1)     # [n_users, 1, dim]
-        item_mu_exp = item_mu.unsqueeze(0)           # [1, n_items, dim]
-        item_var_exp = item_var.unsqueeze(0)     # [1, n_items, dim]
-        
-        
-        term1 = user_var_exp * item_var_exp           # σ_uk * σ_ik: [n_users, n_items, dim]
-        term2 = user_var_exp * item_mu_exp.pow(2)       # σ_uk * μ_ik^2: [n_users, n_items, dim]
-        term3 = user_mu_exp.pow(2) * item_var_exp       # μ_uk^2 * σ_ik: [n_users, n_items, dim]
-        
-        Var_Y = (term1 + term2 + term3).sum(dim=-1) + 1e-8  # [n_users, n_items]
+        Var_Y = (
+            torch.matmul(user_var, item_var.t())
+            + torch.matmul(user_var, item_mu.pow(2).t())
+            + torch.matmul(user_mu.pow(2), item_var.t())
+        ) + 1e-8
         
          # Probit approximation: ŝ ≈ μ_s / sqrt(1 + (π/8) * σ_s²)
         score = E_Y / torch.sqrt(1.0 + (math.pi / 8.0) * Var_Y)
