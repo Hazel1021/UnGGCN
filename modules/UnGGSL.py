@@ -70,13 +70,20 @@ class UnGGSL(nn.Module):
         self.sparse_norm_adj = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
         self.sparse_norm_adj_var = self._convert_sp_mat_to_sp_tensor(self.adj_mat_var).to(self.device)
 
-    def encode(self, user_mu, user_logsigma, item_mu, item_logsigma):
+    def encode(self, user_mu, user_logsigma, item_mu, item_logsigma, tb_writer=None, global_step=None):
         all_mu = torch.cat([user_mu, item_mu], 0)
         all_logsigma = torch.cat([user_logsigma, item_logsigma], 0) 
         all_var = torch.exp(2 * all_logsigma)
 
         
-        out_mean, out_var = self.gcn_encoder(all_mu, all_var, self.sparse_norm_adj,self.sparse_norm_adj_var)
+        out_mean, out_var = self.gcn_encoder(
+            all_mu,
+            all_var,
+            self.sparse_norm_adj,
+            self.sparse_norm_adj_var,
+            tb_writer=tb_writer,
+            global_step=global_step,
+        )
 
 
         return out_mean, out_var
@@ -197,15 +204,19 @@ class UnGGSL(nn.Module):
         return total_loss, ranking_loss, prior_loss
 
 
-    def generate(self, split=True):
+    def generate(self, split=True, tb_writer=None, global_step=None):
 
         all_mu, all_var = self.encode(self.user_mu, self.user_logsigma,
-                                       self.item_mu, self.item_logsigma)
+                                       self.item_mu, self.item_logsigma,
+                                       tb_writer=tb_writer, global_step=global_step)
         if split:
             user_mean = all_mu[:self.n_users]
             item_mean = all_mu[self.n_users:]
             user_var = all_var[:self.n_users]
             item_var = all_var[self.n_users:]
+
+            if tb_writer is not None and global_step is not None:
+                self._log_embedding_var_stats(tb_writer, global_step, user_var, item_var)
 
             return user_mean, item_mean, user_var, item_var
         else:
@@ -240,6 +251,20 @@ class UnGGSL(nn.Module):
                
 
         return score  # [n_users, n_items]
+
+    def _log_embedding_var_stats(self, tb_writer, global_step, user_var, item_var):
+        with torch.no_grad():
+            for name, value in (("user", user_var), ("item", item_var)):
+                if not torch.isfinite(value).all():
+                    if self.logger is not None:
+                        self.logger.warning(f"{name}_var has NaN/Inf at step {global_step}")
+                    continue
+                value_cpu = value.detach().cpu()
+                tb_writer.add_histogram(f"embedding_var/{name}/distribution", value_cpu, global_step)
+                tb_writer.add_scalar(f"embedding_var/{name}/mean", float(value_cpu.mean()), global_step)
+                tb_writer.add_scalar(f"embedding_var/{name}/std", float(value_cpu.std()), global_step)
+                tb_writer.add_scalar(f"embedding_var/{name}/min", float(value_cpu.min()), global_step)
+                tb_writer.add_scalar(f"embedding_var/{name}/max", float(value_cpu.max()), global_step)
     
    
 
@@ -262,7 +287,7 @@ class UncertaintyGraphConvLayer(nn.Module):
         print(f"UncertaintyGraphConvLayer initialized with beta={beta}, disable_ump={disable_ump}")
 
 
-    def forward(self, mu, var, adj_norm, adj_norm_var):
+    def forward(self, mu, var, adj_norm, adj_norm_var, tb_writer=None, global_step=None, layer_idx=None):
         """
         Args:
             mu:  [N, dim]
@@ -278,8 +303,9 @@ class UncertaintyGraphConvLayer(nn.Module):
         # weight based on variance (softplus)
 
         attention =  F.softplus(- var,beta = self.beta)
-        # print("sigma:",sigma)
-        
+
+        if tb_writer is not None and global_step is not None and layer_idx is not None:
+            self._log_attention_stats(tb_writer, attention, layer_idx, global_step)
         
 
         if self.disable_ump:
@@ -294,6 +320,26 @@ class UncertaintyGraphConvLayer(nn.Module):
             
         return new_mu, new_var
      
+    def _log_attention_stats(self, tb_writer, attention, layer_idx, global_step):
+        with torch.no_grad():
+            if not torch.isfinite(attention).all():
+                return
+            attention_cpu = attention.detach().cpu()
+            tb_writer.add_histogram(f"attention_stats/layer_{layer_idx}/distribution", attention_cpu, global_step)
+            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/mean", float(attention_cpu.mean()), global_step)
+            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/std", float(attention_cpu.std()), global_step)
+            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/min", float(attention_cpu.min()), global_step)
+            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/max", float(attention_cpu.max()), global_step)
+            tb_writer.add_scalar(
+                f"attention_stats/layer_{layer_idx}/ratio_gt_1",
+                float((attention_cpu > 1.0).float().mean()),
+                global_step,
+            )
+            tb_writer.add_scalar(
+                f"attention_stats/layer_{layer_idx}/ratio_lt_0_1",
+                float((attention_cpu < 0.1).float().mean()),
+                global_step,
+            )
 
     
 
@@ -324,7 +370,7 @@ class UncertaintyGCNEncoder(nn.Module):
         ])
         
 
-    def forward(self, init_mu, init_var, adj_norm, adj_norm_var):
+    def forward(self, init_mu, init_var, adj_norm, adj_norm_var, tb_writer=None, global_step=None):
         """
         Args:
             init_mu: initial mean embeddings [N, dim]
@@ -342,12 +388,25 @@ class UncertaintyGCNEncoder(nn.Module):
         mu = init_mu
         var = init_var
 
+        if tb_writer is not None and global_step is not None:
+            self._log_var_stats(tb_writer, var, layer_idx=0, global_step=global_step)
         
         for layer_idx, conv in enumerate(self.convs, start=1):
-            mu, var = conv(mu, var, adj_norm, adj_norm_var)
+            mu, var = conv(
+                mu,
+                var,
+                adj_norm,
+                adj_norm_var,
+                tb_writer=tb_writer,
+                global_step=global_step,
+                layer_idx=layer_idx,
+            )
             mu_list.append(mu)
             var_list.append(var)
 
+            if tb_writer is not None and global_step is not None:
+                self._log_var_stats(tb_writer, var, layer_idx=layer_idx, global_step=global_step)
+                self._log_var_delta_stats(tb_writer, var_list[-2], var, layer_idx, global_step)
         
         n_layers = len(mu_list)
         mu_stack = torch.stack(mu_list, dim=0)   # [L+1, N, dim]
@@ -360,6 +419,26 @@ class UncertaintyGCNEncoder(nn.Module):
         
         return final_mu, final_var
 
-    
+    def _log_var_stats(self, tb_writer, var, layer_idx, global_step):
+        with torch.no_grad():
+            if not torch.isfinite(var).all():
+                return
+            var_cpu = var.detach().cpu()
+            tb_writer.add_histogram(f"var_stats/layer_{layer_idx}/distribution", var_cpu, global_step)
+            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/mean", float(var_cpu.mean()), global_step)
+            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/std", float(var_cpu.std()), global_step)
+            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/min", float(var_cpu.min()), global_step)
+            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/max", float(var_cpu.max()), global_step)
+
+    def _log_var_delta_stats(self, tb_writer, prev_var, cur_var, layer_idx, global_step):
+        with torch.no_grad():
+            delta = cur_var - prev_var
+            if not torch.isfinite(delta).all():
+                return
+            delta_cpu = delta.detach().cpu()
+            tb_writer.add_histogram(f"var_delta/layer_{layer_idx}/distribution", delta_cpu, global_step)
+            tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/mean", float(delta_cpu.mean()), global_step)
+            tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/abs_mean", float(delta_cpu.abs().mean()), global_step)
+            tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/positive_ratio", float((delta_cpu > 0).float().mean()), global_step)
 
     

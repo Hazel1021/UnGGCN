@@ -5,6 +5,7 @@ import torch
 import numpy as np
 from time import time
 import logging
+from torch.utils.tensorboard import SummaryWriter
 
 from utils.parser import parse_args, parse_ks
 from utils.data_loader import load_data
@@ -73,6 +74,17 @@ def format_metrics(prefix, metrics, k_values):
     return lines
 
 
+def init_tb_writer(args):
+    ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
+    run_name = (
+        f"{args.dataset}_{args.gnn}{ump_suffix}_dim{args.dim}_hops{args.context_hops}"
+        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}_noise{args.noise_ratio}_seed{args.seed}"
+    )
+    writer_path = os.path.join(args.out_dir, "runs", run_name)
+    os.makedirs(writer_path, exist_ok=True)
+    return SummaryWriter(log_dir=writer_path), writer_path
+
+
 def train(train_args=None):
     global n_users, n_items, K, device, args
 
@@ -114,6 +126,8 @@ def train(train_args=None):
     """"init logger"""
     logger = init_logger(args)
     logger.info(f"model parameters: {args}")
+    writer, writer_path = init_tb_writer(args)
+    logger.info(f"TensorBoard log dir: {writer_path}")
 
 
     model = UnGGSL(n_params, args, norm_mat,norm_mat_var,logger).to(device)
@@ -161,6 +175,7 @@ def train(train_args=None):
             loss_value += batch_loss.item()
             s = e
         train_e_t = time()
+        writer.add_scalar('Loss/train_epoch_sum', loss_value, epoch)
 
         epoch_time = train_e_t - train_s_t
         epoch_times.append(epoch_time)
@@ -168,6 +183,8 @@ def train(train_args=None):
 
         if epoch % 5 == 0:
             model.eval()
+            with torch.no_grad():
+                model.generate(split=True, tb_writer=writer, global_step=epoch)
             
             if user_dict['valid_user_set'] is None:
                 test_s_t = time()
@@ -182,15 +199,23 @@ def train(train_args=None):
 
             ndcg_str = " ; ".join([f"ndcg@{k}: {valid_ret['ndcg'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{ndcg_str}")
+            for i, k in enumerate(k_values):
+                writer.add_scalar(f'{selection_split}/ndcg@{k}', valid_ret['ndcg'][i], epoch)
 
             recall_str = " ; ".join([f"recall@{k}: {valid_ret['recall'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{recall_str}")
+            for i, k in enumerate(k_values):
+                writer.add_scalar(f'{selection_split}/recall@{k}', valid_ret['recall'][i], epoch)
 
             precision_str = " ; ".join([f"precision@{k}: {valid_ret['precision'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{precision_str}")
+            for i, k in enumerate(k_values):
+                writer.add_scalar(f'{selection_split}/precision@{k}', valid_ret['precision'][i], epoch)
 
             hit_ratio_str = " ; ".join([f"hit_ratio@{k}: {valid_ret['hit_ratio'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{hit_ratio_str}")
+            for i, k in enumerate(k_values):
+                writer.add_scalar(f'{selection_split}/hit_ratio@{k}', valid_ret['hit_ratio'][i], epoch)
 
             valid_score = float(valid_ret['ndcg'][0])
 
@@ -262,12 +287,20 @@ def train(train_args=None):
         test_s_t = time()
         test_metrics = test(model, user_dict, n_params, mode='test', eval_args=args)
         test_e_t = time()
+        for i, k in enumerate(k_values):
+            writer.add_scalar(f'test/ndcg@{k}', test_metrics['ndcg'][i], best_metrics["epoch"])
+            writer.add_scalar(f'test/recall@{k}', test_metrics['recall'][i], best_metrics["epoch"])
+            writer.add_scalar(f'test/precision@{k}', test_metrics['precision'][i], best_metrics["epoch"])
+            writer.add_scalar(f'test/hit_ratio@{k}', test_metrics['hit_ratio'][i], best_metrics["epoch"])
         logger.info(f"Final test on best model, testing time(s): {test_e_t - test_s_t:.4f}")
         logger.info('Best model test performance:')
         for line in format_metrics('test', test_metrics, k_values):
             logger.info(line)
     else:
         logger.info('No validation checkpoint was evaluated.')
+
+    writer.flush()
+    writer.close()
 
 if __name__ == '__main__':
     args = parse_args()
