@@ -278,7 +278,8 @@ class UncertaintyGraphConvLayer(nn.Module):
     def __init__(self, beta=0.5, disable_ump=False):
         """
         Args:
-            beta: controls how much variance affects the attention weights
+            beta: gamma in exp(-gamma * variance), controlling how strongly
+                variance suppresses message passing
         """
         super(UncertaintyGraphConvLayer, self).__init__()
         self.beta=beta
@@ -300,9 +301,8 @@ class UncertaintyGraphConvLayer(nn.Module):
             new_sigma: [N, dim]
         """
         
-        # weight based on variance (softplus)
-
-        attention =  F.softplus(- var,beta = self.beta)
+        # Weight based on variance: exp(-gamma * variance).
+        attention = torch.exp(-self.beta * var)
 
         if tb_writer is not None and global_step is not None and layer_idx is not None:
             self._log_attention_stats(tb_writer, attention, layer_idx, global_step)
