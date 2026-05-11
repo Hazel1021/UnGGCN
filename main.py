@@ -46,7 +46,7 @@ def init_logger(args):
     out_dir = os.path.join(args.log_dir, args.dataset, args.gnn + ump_suffix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_beta_{args.beta}_noise_{args.noise_ratio}.txt'
+    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_lw{args.lw}_beta_{args.beta}_noise_{args.noise_ratio}.txt'
     filepath = os.path.join(out_dir, filename)
 
     logger = logging.getLogger()
@@ -210,7 +210,7 @@ def train(train_args=None):
                 if args.save:
                     os.makedirs(args.model_dir, exist_ok=True)
                     ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
-                    save_path = os.path.join(args.model_dir, f'model_dataset_{args.dataset}_noise_{args.noise_ratio}_dim{args.dim}_hops{args.context_hops}_beta{args.beta}_lr{args.lr}{ump_suffix}.ckpt')
+                    save_path = os.path.join(args.model_dir, f'model_{ump_suffix}_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}_lr{args.lr}_lw_{args.lw}_beta{args.beta}_noise_{args.noise_ratio}.ckpt')
                     best_save_path = save_path
                     logger.info(f"Saving best model at epoch {epoch}: valid ndcg@10={best_valid_score:.6f} -> {save_path}")
                     torch.save(model.state_dict(), save_path)
