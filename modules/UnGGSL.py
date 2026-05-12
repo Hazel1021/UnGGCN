@@ -107,9 +107,9 @@ class UnGGSL(nn.Module):
         user_var = user_var[user]
         pos_var = item_var[pos_item]
 
-
-        neg_idx = neg_item[:, 0]
-        neg_mu = item_mu[neg_idx]
+        
+        neg_idx = neg_item[:, 0] # [2048]
+        neg_mu = item_mu[neg_idx] # [2048, 64]
         neg_var = item_var[neg_idx]
 
            
@@ -190,6 +190,7 @@ class UnGGSL(nn.Module):
         
         # (1/2 - α) log(Σ) = -3/2 * log(Σ)
         prior_term1 = (0.5 - self.alpha_prior) * torch.log(batch_var)
+
         
         # -(2β + λμ^2) / (2Σ) = -(4 + μ^2) / (2Σ)
         prior_term2 = -(2.0 * self.beta_prior + self.lambda_prior * batch_mu.pow(2)) / (2.0 * batch_var)
@@ -197,7 +198,7 @@ class UnGGSL(nn.Module):
 
         prior_loss = -(prior_term1 + prior_term2).mean()  
         
-        total_loss = ranking_loss +  self.lw *prior_loss
+        total_loss = ranking_loss +  self.lw * prior_loss
         loss_e_t= time()
         loss_time=loss_e_t-loss_s_t
 
@@ -216,7 +217,7 @@ class UnGGSL(nn.Module):
             item_var = all_var[self.n_users:]
 
             if tb_writer is not None and global_step is not None:
-                self._log_embedding_var_stats(tb_writer, global_step, user_var, item_var)
+                self._log_final_var_stats(tb_writer, global_step, user_var, item_var)
 
             return user_mean, item_mean, user_var, item_var
         else:
@@ -252,7 +253,7 @@ class UnGGSL(nn.Module):
 
         return score  # [n_users, n_items]
 
-    def _log_embedding_var_stats(self, tb_writer, global_step, user_var, item_var):
+    def _log_final_var_stats(self, tb_writer, global_step, user_var, item_var):
         with torch.no_grad():
             for name, value in (("user", user_var), ("item", item_var)):
                 if not torch.isfinite(value).all():
@@ -260,11 +261,8 @@ class UnGGSL(nn.Module):
                         self.logger.warning(f"{name}_var has NaN/Inf at step {global_step}")
                     continue
                 value_cpu = value.detach().cpu()
-                tb_writer.add_histogram(f"embedding_var/{name}/distribution", value_cpu, global_step)
-                tb_writer.add_scalar(f"embedding_var/{name}/mean", float(value_cpu.mean()), global_step)
-                tb_writer.add_scalar(f"embedding_var/{name}/std", float(value_cpu.std()), global_step)
-                tb_writer.add_scalar(f"embedding_var/{name}/min", float(value_cpu.min()), global_step)
-                tb_writer.add_scalar(f"embedding_var/{name}/max", float(value_cpu.max()), global_step)
+                tb_writer.add_scalar(f"final_var/{name}_mean", float(value_cpu.mean()), global_step)
+                tb_writer.add_scalar(f"final_var/{name}_std", float(value_cpu.std()), global_step)
     
    
 
@@ -278,8 +276,7 @@ class UncertaintyGraphConvLayer(nn.Module):
     def __init__(self, beta=0.5, disable_ump=False):
         """
         Args:
-            beta: gamma in exp(-gamma * variance), controlling how strongly
-                variance suppresses message passing
+            beta: controls the softplus shape used for uncertainty attention
         """
         super(UncertaintyGraphConvLayer, self).__init__()
         self.beta=beta
@@ -301,12 +298,8 @@ class UncertaintyGraphConvLayer(nn.Module):
             new_sigma: [N, dim]
         """
         
-        # Weight based on variance: exp(-gamma * variance).
-        attention = torch.exp(-self.beta * var)
-
-        if tb_writer is not None and global_step is not None and layer_idx is not None:
-            self._log_attention_stats(tb_writer, attention, layer_idx, global_step)
-        
+        # Weight based on variance.
+        attention = F.softplus(-var, beta=self.beta)
 
         if self.disable_ump:
             mu_weighted = mu
@@ -319,27 +312,6 @@ class UncertaintyGraphConvLayer(nn.Module):
         new_var= torch.sparse.mm(adj_norm_var, sigma_weighted)
             
         return new_mu, new_var
-     
-    def _log_attention_stats(self, tb_writer, attention, layer_idx, global_step):
-        with torch.no_grad():
-            if not torch.isfinite(attention).all():
-                return
-            attention_cpu = attention.detach().cpu()
-            tb_writer.add_histogram(f"attention_stats/layer_{layer_idx}/distribution", attention_cpu, global_step)
-            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/mean", float(attention_cpu.mean()), global_step)
-            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/std", float(attention_cpu.std()), global_step)
-            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/min", float(attention_cpu.min()), global_step)
-            tb_writer.add_scalar(f"attention_stats/layer_{layer_idx}/max", float(attention_cpu.max()), global_step)
-            tb_writer.add_scalar(
-                f"attention_stats/layer_{layer_idx}/ratio_gt_1",
-                float((attention_cpu > 1.0).float().mean()),
-                global_step,
-            )
-            tb_writer.add_scalar(
-                f"attention_stats/layer_{layer_idx}/ratio_lt_0_1",
-                float((attention_cpu < 0.1).float().mean()),
-                global_step,
-            )
 
     
 
@@ -424,11 +396,8 @@ class UncertaintyGCNEncoder(nn.Module):
             if not torch.isfinite(var).all():
                 return
             var_cpu = var.detach().cpu()
-            tb_writer.add_histogram(f"var_stats/layer_{layer_idx}/distribution", var_cpu, global_step)
             tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/mean", float(var_cpu.mean()), global_step)
             tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/std", float(var_cpu.std()), global_step)
-            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/min", float(var_cpu.min()), global_step)
-            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/max", float(var_cpu.max()), global_step)
 
     def _log_var_delta_stats(self, tb_writer, prev_var, cur_var, layer_idx, global_step):
         with torch.no_grad():
@@ -436,9 +405,7 @@ class UncertaintyGCNEncoder(nn.Module):
             if not torch.isfinite(delta).all():
                 return
             delta_cpu = delta.detach().cpu()
-            tb_writer.add_histogram(f"var_delta/layer_{layer_idx}/distribution", delta_cpu, global_step)
             tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/mean", float(delta_cpu.mean()), global_step)
             tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/abs_mean", float(delta_cpu.abs().mean()), global_step)
-            tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/positive_ratio", float((delta_cpu > 0).float().mean()), global_step)
 
     

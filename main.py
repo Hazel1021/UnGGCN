@@ -158,6 +158,7 @@ def train(train_args=None):
         """training"""
         model.train()
         loss_value, s = 0.0, 0
+        ranking_loss_value, prior_loss_value, batch_count = 0.0, 0.0, 0
         train_s_t = time()
         while s < len(train_cf):
             e = min(s + args.batch_size, len(train_cf))
@@ -166,16 +167,22 @@ def train(train_args=None):
                                     s, e,
                                     n_negs)
 
-            batch_loss, _, _ = model(batch)
+            batch_loss, ranking_loss, prior_loss = model(batch)
 
             optimizer.zero_grad()
             batch_loss.backward()
             optimizer.step()
 
             loss_value += batch_loss.item()
+            ranking_loss_value += ranking_loss.item()
+            prior_loss_value += prior_loss.item()
+            batch_count += 1
             s = e
         train_e_t = time()
-        writer.add_scalar('Loss/train_epoch_sum', loss_value, epoch)
+        if batch_count > 0:
+            writer.add_scalar('loss/total', loss_value / batch_count, epoch)
+            writer.add_scalar('loss/ranking', ranking_loss_value / batch_count, epoch)
+            writer.add_scalar('loss/prior', prior_loss_value / batch_count, epoch)
 
         epoch_time = train_e_t - train_s_t
         epoch_times.append(epoch_time)
@@ -199,23 +206,15 @@ def train(train_args=None):
 
             ndcg_str = " ; ".join([f"ndcg@{k}: {valid_ret['ndcg'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{ndcg_str}")
-            for i, k in enumerate(k_values):
-                writer.add_scalar(f'{selection_split}/ndcg@{k}', valid_ret['ndcg'][i], epoch)
 
             recall_str = " ; ".join([f"recall@{k}: {valid_ret['recall'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{recall_str}")
-            for i, k in enumerate(k_values):
-                writer.add_scalar(f'{selection_split}/recall@{k}', valid_ret['recall'][i], epoch)
 
             precision_str = " ; ".join([f"precision@{k}: {valid_ret['precision'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{precision_str}")
-            for i, k in enumerate(k_values):
-                writer.add_scalar(f'{selection_split}/precision@{k}', valid_ret['precision'][i], epoch)
 
             hit_ratio_str = " ; ".join([f"hit_ratio@{k}: {valid_ret['hit_ratio'][i]:.4f}" for i, k in enumerate(k_values)])
             logger.info(f"\t\t{hit_ratio_str}")
-            for i, k in enumerate(k_values):
-                writer.add_scalar(f'{selection_split}/hit_ratio@{k}', valid_ret['hit_ratio'][i], epoch)
 
             valid_score = float(valid_ret['ndcg'][0])
 
@@ -287,11 +286,6 @@ def train(train_args=None):
         test_s_t = time()
         test_metrics = test(model, user_dict, n_params, mode='test', eval_args=args)
         test_e_t = time()
-        for i, k in enumerate(k_values):
-            writer.add_scalar(f'test/ndcg@{k}', test_metrics['ndcg'][i], best_metrics["epoch"])
-            writer.add_scalar(f'test/recall@{k}', test_metrics['recall'][i], best_metrics["epoch"])
-            writer.add_scalar(f'test/precision@{k}', test_metrics['precision'][i], best_metrics["epoch"])
-            writer.add_scalar(f'test/hit_ratio@{k}', test_metrics['hit_ratio'][i], best_metrics["epoch"])
         logger.info(f"Final test on best model, testing time(s): {test_e_t - test_s_t:.4f}")
         logger.info('Best model test performance:')
         for line in format_metrics('test', test_metrics, k_values):
