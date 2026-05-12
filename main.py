@@ -15,6 +15,15 @@ n_users = 0
 n_items = 0
 
 
+def run_suffix(args):
+    ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
+    return (
+        f"{ump_suffix}_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}"
+        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}_warmup{args.ump_warmup_epochs}"
+        f"_noise_{args.noise_ratio}"
+    )
+
+
 def get_feed_dict(train_entity_pairs, train_pos_set, start, end, n_negs=1):
 
     def sampling(user_item, train_set, n):
@@ -47,7 +56,7 @@ def init_logger(args):
     out_dir = os.path.join(args.log_dir, args.dataset, args.gnn + ump_suffix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_lr{args.lr}_lw{args.lw}_beta_{args.beta}_noise_{args.noise_ratio}.txt'
+    filename = f'log{run_suffix(args)}.txt'
     filepath = os.path.join(out_dir, filename)
 
     logger = logging.getLogger()
@@ -75,11 +84,7 @@ def format_metrics(prefix, metrics, k_values):
 
 
 def init_tb_writer(args):
-    ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
-    run_name = (
-        f"{args.dataset}_{args.gnn}{ump_suffix}_dim{args.dim}_hops{args.context_hops}"
-        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}_noise{args.noise_ratio}_seed{args.seed}"
-    )
+    run_name = f"{args.gnn}{run_suffix(args)}_seed{args.seed}"
     writer_path = os.path.join(args.out_dir, "runs", run_name)
     os.makedirs(writer_path, exist_ok=True)
     return SummaryWriter(log_dir=writer_path), writer_path
@@ -234,8 +239,7 @@ def train(train_args=None):
 
                 if args.save:
                     os.makedirs(args.model_dir, exist_ok=True)
-                    ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
-                    save_path = os.path.join(args.model_dir, f'model_{ump_suffix}_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}_lr{args.lr}_lw_{args.lw}_beta{args.beta}_noise_{args.noise_ratio}.ckpt')
+                    save_path = os.path.join(args.model_dir, f'model{run_suffix(args)}.ckpt')
                     best_save_path = save_path
                     logger.info(f"Saving best model at epoch {epoch}: valid ndcg@10={best_valid_score:.6f} -> {save_path}")
                     torch.save(model.state_dict(), save_path)
