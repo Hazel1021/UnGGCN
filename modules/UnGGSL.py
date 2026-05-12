@@ -36,6 +36,8 @@ class UnGGSL(nn.Module):
         self.logger = logger
         self.beta = args_config.beta
         self.disable_ump = getattr(args_config, "disable_ump", False)
+        self.ump_warmup_epochs = max(0, int(getattr(args_config, "ump_warmup_epochs", 0)))
+        self.current_epoch = 0
 
 
         # Normal-Gamma  ( ν=0, λ=1, α=2, β=2)
@@ -50,6 +52,12 @@ class UnGGSL(nn.Module):
             beta=self.beta,
             disable_ump=self.disable_ump,
         )
+
+    def set_epoch(self, epoch):
+        self.current_epoch = int(epoch)
+
+    def is_ump_warmup_active(self):
+        return self.ump_warmup_epochs > 0 and self.current_epoch < self.ump_warmup_epochs
 
     def _convert_sp_mat_to_sp_tensor(self, X):
         coo = X.tocoo()
@@ -83,6 +91,7 @@ class UnGGSL(nn.Module):
             self.sparse_norm_adj_var,
             tb_writer=tb_writer,
             global_step=global_step,
+            warmup_active=self.is_ump_warmup_active(),
         )
 
 
@@ -285,7 +294,7 @@ class UncertaintyGraphConvLayer(nn.Module):
         print(f"UncertaintyGraphConvLayer initialized with beta={beta}, disable_ump={disable_ump}")
 
 
-    def forward(self, mu, var, adj_norm, adj_norm_var, tb_writer=None, global_step=None, layer_idx=None):
+    def forward(self, mu, var, adj_norm, adj_norm_var, tb_writer=None, global_step=None, layer_idx=None, warmup_active=False):
         """
         Args:
             mu:  [N, dim]
@@ -301,7 +310,7 @@ class UncertaintyGraphConvLayer(nn.Module):
         # Weight based on variance.
         attention = F.softplus(-var, beta=self.beta)
 
-        if self.disable_ump:
+        if self.disable_ump or warmup_active:
             mu_weighted = mu
             sigma_weighted = var
         else:
@@ -342,7 +351,7 @@ class UncertaintyGCNEncoder(nn.Module):
         ])
         
 
-    def forward(self, init_mu, init_var, adj_norm, adj_norm_var, tb_writer=None, global_step=None):
+    def forward(self, init_mu, init_var, adj_norm, adj_norm_var, tb_writer=None, global_step=None, warmup_active=False):
         """
         Args:
             init_mu: initial mean embeddings [N, dim]
@@ -372,6 +381,7 @@ class UncertaintyGCNEncoder(nn.Module):
                 tb_writer=tb_writer,
                 global_step=global_step,
                 layer_idx=layer_idx,
+                warmup_active=warmup_active,
             )
             mu_list.append(mu)
             var_list.append(var)

@@ -47,7 +47,7 @@ def init_logger(args):
     out_dir = os.path.join(args.log_dir, args.dataset, args.gnn + ump_suffix)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_lw{args.lw}_beta_{args.beta}_noise_{args.noise_ratio}.txt'
+    filename = f'log_{args.dataset}_dim{args.dim}_hops{args.context_hops}_lr{args.lr}_lw{args.lw}_beta_{args.beta}_noise_{args.noise_ratio}.txt'
     filepath = os.path.join(out_dir, filename)
 
     logger = logging.getLogger()
@@ -150,6 +150,7 @@ def train(train_args=None):
     print("start training ...")
     
     for epoch in range(args.epoch):
+        model.set_epoch(epoch)
         # shuffle training data
         index = np.arange(len(train_cf))
         np.random.shuffle(index)

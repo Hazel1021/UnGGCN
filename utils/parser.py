@@ -63,6 +63,8 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=2025, help="random seed")
     parser.add_argument("--disable_ump", action="store_true",default=False,
                         help="disable uncertainty-guided message passing for ablation")
+    parser.add_argument("--ump_warmup_epochs", type=int, default=0,
+                        help="number of initial epochs that use Gaussian GCN without uncertainty attention")
     # ===== save model ===== #
     parser.add_argument("--save", type=str2bool, default=True, help="save model or not")
     parser.add_argument(
