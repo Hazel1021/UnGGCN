@@ -65,6 +65,8 @@ def parse_args():
                         help="disable uncertainty-guided message passing for ablation")
     parser.add_argument("--ump_warmup_epochs", type=int, default=0,
                         help="number of initial epochs that use Gaussian GCN without uncertainty attention")
+    parser.add_argument("--early_stop_patience", type=int, default=50,
+                        help="early stopping patience counted on validation checks")
     # ===== save model ===== #
     parser.add_argument("--save", type=str2bool, default=True, help="save model or not")
     parser.add_argument(

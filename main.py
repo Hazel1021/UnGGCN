@@ -10,6 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from utils.parser import parse_args, parse_ks
 from utils.data_loader import load_data
 from utils.evaluate import test
+from utils.helper import early_stopping
 
 n_users = 0
 n_items = 0
@@ -223,11 +224,19 @@ def train(train_args=None):
             logger.info(f"\t\t{hit_ratio_str}")
 
             valid_score = float(valid_ret['ndcg'][0])
+            prev_best_score = best_valid_score
 
-            if valid_score > best_valid_score:
-                best_valid_score = valid_score
+            best_valid_score, stopping_step, should_stop = early_stopping(
+                logger,
+                valid_score,
+                best_valid_score,
+                stopping_step,
+                expected_order='acc',
+                flag_step=args.early_stop_patience,
+            )
+
+            if valid_score >= prev_best_score:
                 best_epoch = epoch
-                stopping_step = 0
                 best_metrics = {
                     'epoch': epoch,
                     'valid_ndcg': valid_ret['ndcg'],
@@ -244,13 +253,13 @@ def train(train_args=None):
                     logger.info(f"Saving best model at epoch {epoch}: valid ndcg@10={best_valid_score:.6f} -> {save_path}")
                     torch.save(model.state_dict(), save_path)
             else:
-                stopping_step += 1
                 logger.info(
                     f"No improvement at epoch {epoch}: valid ndcg@10={valid_score:.6f}, "
-                    f"best={best_valid_score:.6f} at epoch {best_epoch}, stopping_step={stopping_step}/10"
+                    f"best={best_valid_score:.6f} at epoch {best_epoch}, "
+                    f"stopping_step={stopping_step}/{args.early_stop_patience}"
                 )
 
-            if stopping_step >= 10:
+            if should_stop:
                 logger.info(f"Early stopping at epoch {epoch}")
                 break
         else:
