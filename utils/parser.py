@@ -61,11 +61,7 @@ def parse_args():
     parser.add_argument("--logsigma",type=float, default=0.0, help="init value for log sigma")
     parser.add_argument("--noise_ratio", type=float, default=0.0, help="ratio of noisy training data")
     parser.add_argument("--seed", type=int, default=2025, help="random seed")
-    parser.add_argument("--disable_ump", action="store_true",default=False,
-                        help="disable uncertainty-guided message passing for ablation")
-    parser.add_argument("--ump_warmup_epochs", type=int, default=0,
-                        help="number of initial epochs that use Gaussian GCN without uncertainty attention")
-    parser.add_argument("--early_stop_patience", type=int, default=50,
+    parser.add_argument("--early_stop_patience", type=int, default=10,
                         help="early stopping patience counted on validation checks")
     # ===== save model ===== #
     parser.add_argument("--save", type=str2bool, default=True, help="save model or not")

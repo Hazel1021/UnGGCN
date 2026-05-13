@@ -17,10 +17,9 @@ n_items = 0
 
 
 def run_suffix(args):
-    ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
     return (
-        f"{ump_suffix}_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}"
-        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}_warmup{args.ump_warmup_epochs}"
+        f"model_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}"
+        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}"
         f"_noise_{args.noise_ratio}"
     )
 
@@ -53,8 +52,7 @@ def get_feed_dict(train_entity_pairs, train_pos_set, start, end, n_negs=1):
 
 def init_logger(args):
 
-    ump_suffix = '_noatt' if getattr(args, 'disable_ump', False) else ''
-    out_dir = os.path.join(args.log_dir, args.dataset, args.gnn + ump_suffix)
+    out_dir = os.path.join(args.log_dir, args.dataset, args.gnn)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     filename = f'log{run_suffix(args)}.txt'
