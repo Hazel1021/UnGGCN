@@ -111,9 +111,7 @@ class UnGGSL(nn.Module):
 
         
         neg_idx = neg_item[:, 0] # [2048]
-        print("neg_idx shape:", neg_idx.shape)
         neg_mu = item_mu[neg_idx] # [2048, 64]
-        print("neg_mu shape:", neg_mu.shape)
         neg_var = item_var[neg_idx]
 
            
@@ -224,9 +222,6 @@ class UnGGSL(nn.Module):
             user_var = all_var[:self.n_users]
             item_var = all_var[self.n_users:]
 
-            if tb_writer is not None and global_step is not None:
-                self._log_final_var_stats(tb_writer, global_step, user_var, item_var)
-
             return user_mean, item_mean, user_var, item_var
         else:
 
@@ -261,20 +256,6 @@ class UnGGSL(nn.Module):
                
 
         return score  # [n_users, n_items]
-
-    def _log_final_var_stats(self, tb_writer, global_step, user_var, item_var):
-        with torch.no_grad():
-            for name, value in (("user", user_var), ("item", item_var)):
-                if not torch.isfinite(value).all():
-                    if self.logger is not None:
-                        self.logger.warning(f"{name}_var has NaN/Inf at step {global_step}")
-                    continue
-                value_cpu = value.detach().cpu()
-                tb_writer.add_scalar(f"final_var/{name}_mean", float(value_cpu.mean()), global_step)
-                tb_writer.add_scalar(f"final_var/{name}_std", float(value_cpu.std()), global_step)
-    
-   
-
 
 class UncertaintyGraphConvLayer(nn.Module):
     
@@ -386,7 +367,6 @@ class UncertaintyGCNEncoder(nn.Module):
 
             if tb_writer is not None and global_step is not None:
                 self._log_var_stats(tb_writer, var, layer_idx=layer_idx, global_step=global_step)
-                self._log_var_delta_stats(tb_writer, var_list[-2], var, layer_idx, global_step)
         
         n_layers = len(mu_list)
         mu_stack = torch.stack(mu_list, dim=0)   # [L+1, N, dim]
@@ -404,16 +384,4 @@ class UncertaintyGCNEncoder(nn.Module):
             if not torch.isfinite(var).all():
                 return
             var_cpu = var.detach().cpu()
-            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/mean", float(var_cpu.mean()), global_step)
-            tb_writer.add_scalar(f"var_stats/layer_{layer_idx}/std", float(var_cpu.std()), global_step)
-
-    def _log_var_delta_stats(self, tb_writer, prev_var, cur_var, layer_idx, global_step):
-        with torch.no_grad():
-            delta = cur_var - prev_var
-            if not torch.isfinite(delta).all():
-                return
-            delta_cpu = delta.detach().cpu()
-            tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/mean", float(delta_cpu.mean()), global_step)
-            tb_writer.add_scalar(f"var_delta/layer_{layer_idx}/abs_mean", float(delta_cpu.abs().mean()), global_step)
-
-    
+            tb_writer.add_histogram(f"var_distribution/layer_{layer_idx}", var_cpu, global_step)

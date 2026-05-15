@@ -84,7 +84,7 @@ def format_metrics(prefix, metrics, k_values):
 
 def init_tb_writer(args):
     run_name = f"{args.gnn}{run_suffix(args)}_seed{args.seed}"
-    writer_path = os.path.join(args.out_dir, "runs", run_name)
+    writer_path = os.path.join(args.out_dir, "runs", args.dataset, run_name)
     os.makedirs(writer_path, exist_ok=True)
     return SummaryWriter(log_dir=writer_path), writer_path
 
