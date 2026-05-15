@@ -245,8 +245,9 @@ def train(train_args=None):
                 best_state_dict = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
                 if args.save:
-                    os.makedirs(args.model_dir, exist_ok=True)
-                    save_path = os.path.join(args.model_dir, f'model{run_suffix(args)}.ckpt')
+                    dataset_model_dir = os.path.join(args.model_dir, args.dataset)
+                    os.makedirs(dataset_model_dir, exist_ok=True)
+                    save_path = os.path.join(dataset_model_dir, f'model{run_suffix(args)}.ckpt')
                     best_save_path = save_path
                     logger.info(f"Saving best model at epoch {epoch}: valid ndcg@10={best_valid_score:.6f} -> {save_path}")
                     torch.save(model.state_dict(), save_path)
