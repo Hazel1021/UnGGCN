@@ -41,7 +41,7 @@ class UnGGSL(nn.Module):
         # Normal-Gamma prior.
         self.nu_prior = 0.0
         self.lambda_prior = 1.0
-        self.alpha_prior = 2.0
+        self.alpha_prior = args_config.prior_alpha
         self.beta_prior = args_config.prior_beta
         
 

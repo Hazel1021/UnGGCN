@@ -57,6 +57,8 @@ def parse_args():
                         help='Specify the test type from {part, full}, indicating whether the reference is done in mini-batch')
     parser.add_argument("--context_hops", type=int, default=3, help="hop")
     parser.add_argument("--beta",type=float, default=0.7, help="beta for softplus")
+    parser.add_argument("--prior_alpha", type=float, default=2.0,
+                        help="alpha parameter of the Normal-Gamma prior")
     parser.add_argument("--prior_beta", type=float, default=1.0,
                         help="beta parameter of the Normal-Gamma prior")
     parser.add_argument("--log_dir", type=str, default="./logs/", help="directory to save logs")

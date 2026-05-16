@@ -19,7 +19,8 @@ n_items = 0
 def run_suffix(args):
     return (
         f"model_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}"
-        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}_priorbeta{args.prior_beta}"
+        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}"
+        f"_prioralpha{args.prior_alpha}_priorbeta{args.prior_beta}"
         f"_noise_{args.noise_ratio}"
     )
 
