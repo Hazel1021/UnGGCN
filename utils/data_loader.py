@@ -151,7 +151,7 @@ def load_data(model_args):
     directory = args.data_path + dataset + '/'
     noise_ratio = args.noise_ratio
 
-    if dataset == 'yelp2018':
+    if dataset == 'no':
         read_cf = read_cf_yelp2018
     else:
         read_cf = read_cf_amazon
@@ -161,7 +161,7 @@ def load_data(model_args):
     test_cf = read_cf(directory + 'test.txt')
     all_cf=np.concatenate([train_cf,test_cf],axis=0)
     print(f"train + test len: {len(all_cf)}")
-    if args.dataset != 'yelp2018' :
+    if args.dataset != 'no' :
         valid_cf = read_cf(directory + 'valid.txt')
         all_cf=np.concatenate([all_cf,valid_cf],axis=0)
         print(f"all_cf len: {len(all_cf)}")
@@ -189,7 +189,7 @@ def load_data(model_args):
     }
     user_dict = {
         'train_user_set': train_user_set,
-        'valid_user_set': valid_user_set if args.dataset != 'yelp2018' else None,
+        'valid_user_set': valid_user_set if args.dataset != 'no' else None,
         'test_user_set': test_user_set,
     }
 

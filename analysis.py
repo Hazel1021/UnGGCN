@@ -25,8 +25,10 @@ from modules.UnGGSL import UnGGSL
 # ─── 工具函数 ───
 
 def find_checkpoint(model_dir, dataset, noise_ratio, dim, context_hops, beta, lr):
-    exact = f'model_dataset_{dataset}_noise_{noise_ratio}_dim{dim}_hops{context_hops}_beta{beta}_lr{lr}.ckpt'
+    model_dir = os.path.join(model_dir, dataset)
+    exact = f'modelmodel_dataset_{dataset}_dim{dim}_hops{context_hops}_lr{lr}_lw1.0_beta{beta}_prioralpha2.0_priorbeta1.0_noise_{noise_ratio}.ckpt'
     path = os.path.join(model_dir, exact)
+    print(f"  查找 checkpoint: {path} ...")
     if os.path.exists(path):
         return path
     if os.path.isdir(model_dir):
@@ -128,7 +130,7 @@ def print_table(all_vars, noise_ratios):
 
 def main():
     parser = argparse.ArgumentParser(description="Variance Analysis")
-    parser.add_argument('--noise_ratios', type=float, nargs='+', default=[0.0, 0.1, 0.3, 0.5])
+    parser.add_argument('--noise_ratios', type=float, nargs='+', default=[0.0, 0.1, 0.3])
     parser.add_argument('--save_dir', type=str, default='./analysis_results/')
     known, remaining = parser.parse_known_args()
 

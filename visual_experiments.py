@@ -522,7 +522,7 @@ def main():
     parser = argparse.ArgumentParser(description="UnGGCN visual experiments")
     parser.add_argument("--experiment", choices=["motivation", "noise_uncertainty"], required=True)
     parser.add_argument("--noise_ratio", type=float, default=0.3)
-    parser.add_argument("--noise_ratios", type=float, nargs="+", default=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+    parser.add_argument("--noise_ratios", type=float, nargs="+", default=[0.0,0.3])
     parser.add_argument("--save_dir", type=str, default="./analysis_results/")
     parser.add_argument("--max_samples", type=int, default=24)
     parser.add_argument("--edge_sample_size", type=int, default=5000)
