@@ -46,19 +46,21 @@ def write_csv(path, rows, fieldnames):
         writer.writerows(rows)
 
 
-def checkpoint_candidates(model_dir, dataset, noise_ratio, dim, context_hops, beta, lr, disable_ump):
-    model_dir = Path(model_dir)
-    suffix = "_noatt" if disable_ump else ""
+def checkpoint_candidates(args):
+    model_dir = Path(args.model_dir) / args.dataset
     exact = model_dir / (
-        f"model_dataset_{dataset}_noise_{noise_ratio}_dim{dim}_hops{context_hops}"
-        f"_beta{beta}_lr{lr}{suffix}.ckpt"
+        f"modelmodel_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}"
+        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}"
+        f"_prioralpha{args.prior_alpha}_priorbeta{args.prior_beta}"
+        f"_noise_{args.noise_ratio}.ckpt"
     )
     if exact.exists():
         return [exact]
 
     pattern = re.compile(
-        rf"^model_dataset_{re.escape(dataset)}_noise_([^_]+)_dim(\d+)_hops(\d+)"
-        rf"_beta([^_]+)_lr([^_]+?)(?:(_noatt))?\.ckpt$"
+        rf"^modelmodel_dataset_{re.escape(args.dataset)}_dim(\d+)_hops(\d+)"
+        rf"_lr([^_]+)_lw([^_]+)_beta([^_]+)"
+        rf"_prioralpha([^_]+)_priorbeta([^_]+)_noise_([^_]+)\.ckpt$"
     )
     matches = []
     if model_dir.is_dir():
@@ -66,38 +68,39 @@ def checkpoint_candidates(model_dir, dataset, noise_ratio, dim, context_hops, be
             match = pattern.match(path.name)
             if not match:
                 continue
-            f_noise, f_dim, f_hops, f_beta, f_lr, f_noatt = match.groups()
+            f_dim, f_hops, f_lr, f_lw, f_beta, f_alpha, f_prior_beta, f_noise = match.groups()
             try:
                 same_config = (
-                    math.isclose(float(f_noise), float(noise_ratio))
-                    and int(f_dim) == int(dim)
-                    and int(f_hops) == int(context_hops)
-                    and math.isclose(float(f_beta), float(beta))
-                    and math.isclose(float(f_lr), float(lr))
+                    math.isclose(float(f_noise), float(args.noise_ratio))
+                    and int(f_dim) == int(args.dim)
+                    and int(f_hops) == int(args.context_hops)
+                    and math.isclose(float(f_beta), float(args.beta))
+                    and math.isclose(float(f_lr), float(args.lr))
+                    and math.isclose(float(f_lw), float(args.lw))
+                    and math.isclose(float(f_alpha), float(args.prior_alpha))
+                    and math.isclose(float(f_prior_beta), float(args.prior_beta))
                 )
             except ValueError:
                 same_config = False
-            if same_config and bool(f_noatt) == bool(disable_ump):
+            if same_config:
                 matches.append(path)
     return sorted(matches)
 
 
 def find_checkpoint(args):
-    candidates = checkpoint_candidates(
-        args.model_dir, args.dataset, args.noise_ratio, args.dim,
-        args.context_hops, args.beta, args.lr, args.disable_ump
-    )
+    candidates = checkpoint_candidates(args)
     if candidates:
         return candidates[0]
-    suffix = " --disable_ump" if args.disable_ump else ""
     command = (
         f"python main.py --dataset {args.dataset} --noise_ratio {args.noise_ratio} "
         f"--dim {args.dim} --context_hops {args.context_hops} --beta {args.beta} "
-        f"--lr {args.lr}{suffix}"
+        f"--lr {args.lr} --lw {args.lw} --prior_alpha {args.prior_alpha} "
+        f"--prior_beta {args.prior_beta}"
     )
     raise FileNotFoundError(
         f"Missing checkpoint for dataset={args.dataset}, noise_ratio={args.noise_ratio}, "
-        f"disable_ump={args.disable_ump}. Train it with:\n  {command}"
+        f"configuration=(dim={args.dim}, hops={args.context_hops}, beta={args.beta}, "
+        f"lr={args.lr}). Train it with:\n  {command}"
     )
 
 
@@ -174,102 +177,249 @@ def predictive_uncertainty(edges, reps, device, batch_size=4096):
     return np.concatenate(out)
 
 
+def match_clean_noisy_edges(clean_edges, noisy_edges, max_pairs, seed):
+    clean_by_user = {}
+    for user, item in np.asarray(clean_edges, dtype=np.int64).reshape(-1, 2):
+        clean_by_user.setdefault(int(user), []).append(int(item))
+
+    eligible_noisy = [
+        (int(user), int(item))
+        for user, item in np.asarray(noisy_edges, dtype=np.int64).reshape(-1, 2)
+        if int(user) in clean_by_user
+    ]
+    rng = np.random.default_rng(seed)
+    rng.shuffle(eligible_noisy)
+    eligible_noisy = eligible_noisy[:max_pairs]
+
+    matched_clean = []
+    matched_noisy = []
+    for user, noisy_item in eligible_noisy:
+        clean_item = int(rng.choice(clean_by_user[user]))
+        matched_clean.append((user, clean_item))
+        matched_noisy.append((user, noisy_item))
+    return (
+        np.asarray(matched_clean, dtype=np.int64).reshape(-1, 2),
+        np.asarray(matched_noisy, dtype=np.int64).reshape(-1, 2),
+    )
+
+
+@torch.no_grad()
+def dimension_uncertainty(edges, reps, device):
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    if len(edges) == 0:
+        return np.empty((0, reps["user_mu"].shape[1]), dtype=np.float64)
+    users = torch.as_tensor(edges[:, 0], dtype=torch.long, device=device)
+    items = torch.as_tensor(edges[:, 1], dtype=torch.long, device=device)
+    u_mu = reps["user_mu"][users]
+    u_var = reps["user_var"][users]
+    i_mu = reps["item_mu"][items]
+    i_var = reps["item_var"][items]
+    contributions = u_var * i_var + u_var * i_mu.pow(2) + u_mu.pow(2) * i_var
+    return contributions.detach().cpu().numpy()
+
+
+def concentration_metrics(contributions):
+    contributions = np.asarray(contributions, dtype=np.float64)
+    probs = contributions / np.maximum(contributions.sum(axis=1, keepdims=True), 1e-12)
+    dim = contributions.shape[1]
+    top_k = max(1, int(math.ceil(dim * 0.2)))
+    top_share = np.sort(probs, axis=1)[:, -top_k:].sum(axis=1)
+    entropy = -(probs * np.log(probs + 1e-12)).sum(axis=1) / math.log(dim)
+    return top_share, entropy
+
+
+def paired_stats(clean, noisy):
+    clean = np.asarray(clean, dtype=np.float64)
+    noisy = np.asarray(noisy, dtype=np.float64)
+    delta = noisy - clean
+    result = {
+        "n_pairs": int(len(delta)),
+        "clean_mean": float(np.mean(clean)),
+        "noisy_mean": float(np.mean(noisy)),
+        "mean_paired_delta": float(np.mean(delta)),
+        "median_paired_delta": float(np.median(delta)),
+        "noisy_greater_fraction": float(np.mean(delta > 0)),
+        "cohen_dz": float(np.mean(delta) / np.std(delta, ddof=1))
+        if len(delta) > 1 and np.std(delta, ddof=1) > 0 else np.nan,
+        "wilcoxon_stat": np.nan,
+        "wilcoxon_p": np.nan,
+    }
+    try:
+        from scipy.stats import wilcoxon
+        stat, p_value = wilcoxon(noisy, clean, alternative="greater")
+        result["wilcoxon_stat"] = float(stat)
+        result["wilcoxon_p"] = float(p_value)
+    except (ImportError, ValueError):
+        pass
+    return result
+
+
+def aggregate_paired_by_user(user_ids, clean_values, noisy_values):
+    user_ids = np.asarray(user_ids, dtype=np.int64)
+    clean_values = np.asarray(clean_values, dtype=np.float64)
+    noisy_values = np.asarray(noisy_values, dtype=np.float64)
+    unique_users = np.unique(user_ids)
+    clean_user = np.asarray([
+        clean_values[user_ids == user_id].mean() for user_id in unique_users
+    ])
+    noisy_user = np.asarray([
+        noisy_values[user_ids == user_id].mean() for user_id in unique_users
+    ])
+    return unique_users, clean_user, noisy_user
+
+
 def run_motivation(args, noise_ratio, save_root, max_samples):
-    clean = load_model_bundle(0.0, args)
-    noisy = load_model_bundle(noise_ratio, args)
-    clean_reps = representations(clean["model"])
-    noisy_reps = representations(noisy["model"])
+    if noise_ratio <= 0:
+        raise ValueError("The motivation experiment requires --noise_ratio > 0.")
 
-    noisy_edges = noisy["n_params"]["injected_noise_edges"]
-    if len(noisy_edges) > 0:
-        candidate_users = np.unique(noisy_edges[:, 0])
-    else:
-        candidate_users = np.arange(noisy["n_params"]["n_users"])
+    bundle = load_model_bundle(noise_ratio, args)
+    reps = representations(bundle["model"])
+    clean_edges, noisy_edges = match_clean_noisy_edges(
+        bundle["n_params"]["clean_train_cf"],
+        bundle["n_params"]["injected_noise_edges"],
+        max_samples,
+        args.seed,
+    )
+    if len(noisy_edges) == 0:
+        raise ValueError(
+            "No injected noisy edges could be matched to clean interactions. "
+            "Increase the noise ratio or check the dataset."
+        )
 
-    clean_user_var = clean_reps["user_var"].detach().cpu().numpy()
-    noisy_user_var = noisy_reps["user_var"].detach().cpu().numpy()
-    delta = np.log(noisy_user_var[candidate_users] + 1e-12) - np.log(clean_user_var[candidate_users] + 1e-12)
-    user_scores = delta.mean(axis=1)
-    top_idx = np.argsort(user_scores)[::-1][:max_samples]
-    selected_users = candidate_users[top_idx]
-    heatmap = delta[top_idx]
+    clean_dim_unc = dimension_uncertainty(clean_edges, reps, bundle["device"])
+    noisy_dim_unc = dimension_uncertainty(noisy_edges, reps, bundle["device"])
+    clean_edge_unc = clean_dim_unc.sum(axis=1)
+    noisy_edge_unc = noisy_dim_unc.sum(axis=1)
+    clean_top_share, clean_entropy = concentration_metrics(clean_dim_unc)
+    noisy_top_share, noisy_entropy = concentration_metrics(noisy_dim_unc)
 
-    dim_order = np.argsort(heatmap.mean(axis=0))[::-1]
-    heatmap_sorted = heatmap[:, dim_order]
+    log_delta = np.log(noisy_dim_unc + 1e-12) - np.log(clean_dim_unc + 1e-12)
+    pair_order = np.argsort(log_delta.mean(axis=1))[::-1]
+    dim_order = np.argsort(log_delta.mean(axis=0))[::-1]
+    heatmap_sorted = log_delta[pair_order[:min(40, len(pair_order))]][:, dim_order]
     save_dir = Path(save_root) / "motivation"
     ensure_dir(save_dir)
 
-    heat_rows = []
-    for row_id, user_id in enumerate(selected_users):
-        for rank, dim in enumerate(dim_order):
-            heat_rows.append({
-                "user_id": int(user_id),
-                "dimension": int(dim),
-                "dimension_rank": int(rank),
-                "clean_var": float(clean_user_var[user_id, dim]),
-                "noisy_var": float(noisy_user_var[user_id, dim]),
-                "delta_var": float(noisy_user_var[user_id, dim] - clean_user_var[user_id, dim]),
-                "delta_log_ratio": float(heatmap[row_id, dim]),
-            })
-    write_csv(
-        save_dir / "dimension_variance_heatmap.csv",
-        heat_rows,
-        ["user_id", "dimension", "dimension_rank", "clean_var", "noisy_var", "delta_var", "delta_log_ratio"],
-    )
-
-    fig, ax = plt.subplots(figsize=(11, 5.5))
-    im = ax.imshow(heatmap_sorted, aspect="auto", cmap="coolwarm")
-    ax.set_title(f"Dimension-wise Variance Increase after Noise Injection (noise={noise_ratio})")
-    ax.set_xlabel("Embedding dimensions sorted by mean variance increase")
-    ax.set_ylabel("Selected users")
-    ax.set_yticks(np.arange(len(selected_users)))
-    ax.set_yticklabels([str(int(u)) for u in selected_users], fontsize=8)
-    cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("log noisy variance - log clean variance")
-    fig.tight_layout()
-    fig.savefig(save_dir / "dimension_variance_heatmap.png", dpi=220)
-    plt.close(fig)
-
-    mean_clean = clean_user_var[selected_users].mean(axis=0)
-    mean_noisy = noisy_user_var[selected_users].mean(axis=0)
-    mean_delta = np.log(mean_noisy + 1e-12) - np.log(mean_clean + 1e-12)
-    mean_weight = attention_from_variance(
-        torch.as_tensor(mean_noisy, dtype=torch.float32), args.beta
-    ).numpy()
-    relation_order = np.argsort(mean_noisy)[::-1]
-
-    relation_rows = []
-    for rank, dim in enumerate(relation_order):
-        relation_rows.append({
-            "dimension": int(dim),
-            "dimension_rank": int(rank),
-            "mean_clean_var": float(mean_clean[dim]),
-            "mean_noisy_var": float(mean_noisy[dim]),
-            "delta_log_ratio": float(mean_delta[dim]),
-            "attention_weight": float(mean_weight[dim]),
+    pair_rows = []
+    for pair_id, (clean_edge, noisy_edge) in enumerate(zip(clean_edges, noisy_edges)):
+        pair_rows.append({
+            "pair_id": pair_id,
+            "user_id": int(noisy_edge[0]),
+            "clean_item_id": int(clean_edge[1]),
+            "noisy_item_id": int(noisy_edge[1]),
+            "clean_predictive_variance": float(clean_edge_unc[pair_id]),
+            "noisy_predictive_variance": float(noisy_edge_unc[pair_id]),
+            "predictive_variance_delta": float(noisy_edge_unc[pair_id] - clean_edge_unc[pair_id]),
+            "clean_top20_dimension_share": float(clean_top_share[pair_id]),
+            "noisy_top20_dimension_share": float(noisy_top_share[pair_id]),
+            "clean_normalized_entropy": float(clean_entropy[pair_id]),
+            "noisy_normalized_entropy": float(noisy_entropy[pair_id]),
         })
     write_csv(
-        save_dir / "variance_weight_relation.csv",
-        relation_rows,
-        ["dimension", "dimension_rank", "mean_clean_var", "mean_noisy_var", "delta_log_ratio", "attention_weight"],
+        save_dir / "paired_edge_metrics.csv",
+        pair_rows,
+        [
+            "pair_id", "user_id", "clean_item_id", "noisy_item_id",
+            "clean_predictive_variance", "noisy_predictive_variance", "predictive_variance_delta",
+            "clean_top20_dimension_share", "noisy_top20_dimension_share",
+            "clean_normalized_entropy", "noisy_normalized_entropy",
+        ],
     )
 
-    x = np.arange(len(relation_order))
-    fig, ax1 = plt.subplots(figsize=(11, 5.5))
-    ax1.plot(x, mean_noisy[relation_order], color="#C44E52", linewidth=2, label="Mean variance")
-    ax1.set_xlabel("Embedding dimensions sorted by variance")
-    ax1.set_ylabel("Mean variance", color="#C44E52")
-    ax1.tick_params(axis="y", labelcolor="#C44E52")
-    ax2 = ax1.twinx()
-    ax2.plot(x, mean_weight[relation_order], color="#4C72B0", linewidth=2, label="Uncertainty weight")
-    ax2.set_ylabel("Uncertainty-guided weight", color="#4C72B0")
-    ax2.tick_params(axis="y", labelcolor="#4C72B0")
-    ax1.set_title(f"High-Variance Dimensions Receive Lower UMP Weights (noise={noise_ratio})")
+    mean_clean_dim = clean_dim_unc.mean(axis=0)
+    mean_noisy_dim = noisy_dim_unc.mean(axis=0)
+    user_ids = torch.as_tensor(noisy_edges[:, 0], dtype=torch.long, device=bundle["device"])
+    item_ids = torch.as_tensor(noisy_edges[:, 1], dtype=torch.long, device=bundle["device"])
+    endpoint_var = torch.cat([reps["user_var"][user_ids], reps["item_var"][item_ids]], dim=0)
+    endpoint_weight = attention_from_variance(endpoint_var, args.beta)
+    flat_var = endpoint_var.detach().cpu().numpy().reshape(-1)
+    flat_weight = endpoint_weight.detach().cpu().numpy().reshape(-1)
+
+    dimension_rows = []
+    for rank, dim in enumerate(dim_order):
+        dimension_rows.append({
+            "dimension": int(dim),
+            "dimension_rank": int(rank),
+            "mean_clean_variance_contribution": float(mean_clean_dim[dim]),
+            "mean_noisy_variance_contribution": float(mean_noisy_dim[dim]),
+            "mean_log_ratio": float(log_delta[:, dim].mean()),
+        })
+    write_csv(
+        save_dir / "dimension_uncertainty_summary.csv",
+        dimension_rows,
+        [
+            "dimension", "dimension_rank", "mean_clean_variance_contribution",
+            "mean_noisy_variance_contribution", "mean_log_ratio",
+        ],
+    )
+
+    pair_user_ids = noisy_edges[:, 0]
+    user_level_metrics = {}
+    stats_rows = []
+    for metric, clean_values, noisy_values in [
+        ("predictive_variance", clean_edge_unc, noisy_edge_unc),
+        ("top20_dimension_share", clean_top_share, noisy_top_share),
+        ("negative_normalized_entropy", -clean_entropy, -noisy_entropy),
+    ]:
+        _, clean_user_values, noisy_user_values = aggregate_paired_by_user(
+            pair_user_ids, clean_values, noisy_values
+        )
+        user_level_metrics[metric] = (clean_user_values, noisy_user_values)
+        stats_rows.append({
+            "metric": metric,
+            "analysis_unit": "user",
+            **paired_stats(clean_user_values, noisy_user_values),
+        })
+    write_csv(save_dir / "motivation_statistics.csv", stats_rows, list(stats_rows[0].keys()))
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
+    clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
+    axes[0].boxplot(
+        [clean_user_unc, noisy_user_unc],
+        labels=["Matched clean", "Injected noisy"],
+        showfliers=False,
+        patch_artist=True,
+    )
+    axes[0].set_title("(a) User-level predictive uncertainty")
+    axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$")
+    axes[0].grid(axis="y", alpha=0.25)
+
+    max_abs = max(float(np.percentile(np.abs(heatmap_sorted), 95)), 1e-6)
+    im = axes[1].imshow(
+        heatmap_sorted,
+        aspect="auto",
+        cmap="coolwarm",
+        vmin=-max_abs,
+        vmax=max_abs,
+    )
+    axes[1].set_title("(b) Dimension-wise uncertainty shift")
+    axes[1].set_xlabel("Dimensions sorted by mean shift")
+    axes[1].set_ylabel("Matched interaction pairs")
+    fig.colorbar(im, ax=axes[1], label="log noisy / clean contribution")
+
+    quantile_edges = np.unique(np.quantile(flat_var, np.linspace(0, 1, 11)))
+    if len(quantile_edges) > 1:
+        bin_ids = np.digitize(flat_var, quantile_edges[1:-1], right=True)
+        bin_x = []
+        bin_y = []
+        for idx in range(len(quantile_edges) - 1):
+            mask = bin_ids == idx
+            if np.any(mask):
+                bin_x.append(float(np.median(flat_var[mask])))
+                bin_y.append(float(np.mean(flat_weight[mask])))
+        axes[2].plot(bin_x, bin_y, marker="o", linewidth=2, color="#4C72B0")
+    axes[2].set_xscale("log")
+    axes[2].set_title("(c) Variance-guided attenuation")
+    axes[2].set_xlabel("Endpoint variance (quantile-bin median)")
+    axes[2].set_ylabel("Message-passing weight")
+    axes[2].grid(alpha=0.25)
+
+    fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
-    fig.savefig(save_dir / "variance_weight_relation.png", dpi=220)
+    fig.savefig(save_dir / "motivation_validation.png", dpi=220)
     plt.close(fig)
 
-    print(f"Saved motivation figures and CSV files to {save_dir}")
+    print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
 
 
 def pearson_corr(x, y):
@@ -524,7 +674,12 @@ def main():
     parser.add_argument("--noise_ratio", type=float, default=0.3)
     parser.add_argument("--noise_ratios", type=float, nargs="+", default=[0.0,0.3])
     parser.add_argument("--save_dir", type=str, default="./analysis_results/")
-    parser.add_argument("--max_samples", type=int, default=24)
+    parser.add_argument(
+        "--max_samples",
+        type=int,
+        default=5000,
+        help="maximum number of same-user clean/noisy pairs in the motivation experiment",
+    )
     parser.add_argument("--edge_sample_size", type=int, default=5000)
     known, remaining = parser.parse_known_args()
 

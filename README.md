@@ -43,6 +43,21 @@ python main.py --dataset pet --lr 0.01
 python main.py --dataset baby --lr 0.001 --beta 0.6 --noise_ratio 0.3
 ```
 
+### Motivation validation
+
+After training a noisy-data checkpoint, compare each injected noisy
+interaction with a clean interaction from the same user:
+
+```bash
+python visual_experiments.py --experiment motivation \
+  --dataset baby --noise_ratio 0.3 --lr 0.001 --beta 0.6 \
+  --max_samples 5000
+```
+
+The experiment reports paired predictive uncertainty, dimension-wise
+uncertainty concentration, variance-guided attenuation, and a one-sided
+paired Wilcoxon test under `analysis_results/motivation/`.
+
 ## Key Hyperparameters
 
 | Parameter | Description | Default |
@@ -53,5 +68,4 @@ python main.py --dataset baby --lr 0.001 --beta 0.6 --noise_ratio 0.3
 | `--beta` | Temperature parameter (τ) | 0.5 |
 | `--noise_ratio` | Ratio of injected noise | 0.0 |
 | `--batch_size` | Training batch size | 2048 |
-
 
