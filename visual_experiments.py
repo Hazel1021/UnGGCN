@@ -206,41 +206,6 @@ def representations(model):
     }
 
 
-def sample_edges(edges, max_edges, seed):
-    if edges is None or len(edges) == 0:
-        return np.empty((0, 2), dtype=np.int32)
-    edges = np.asarray(edges, dtype=np.int32).reshape(-1, 2)
-    if len(edges) <= max_edges:
-        return edges
-    rng = np.random.default_rng(seed)
-    idx = rng.choice(len(edges), size=max_edges, replace=False)
-    return edges[idx]
-
-
-@torch.no_grad()
-def predictive_uncertainty(edges, reps, device, batch_size=4096):
-    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
-    if len(edges) == 0:
-        return np.array([], dtype=np.float64)
-
-    out = []
-    user_mu = reps["user_mu"]
-    user_var = reps["user_var"]
-    item_mu = reps["item_mu"]
-    item_var = reps["item_var"]
-    for start in range(0, len(edges), batch_size):
-        batch = edges[start:start + batch_size]
-        users = torch.as_tensor(batch[:, 0], dtype=torch.long, device=device)
-        items = torch.as_tensor(batch[:, 1], dtype=torch.long, device=device)
-        u_mu = user_mu[users]
-        u_var = user_var[users]
-        i_mu = item_mu[items]
-        i_var = item_var[items]
-        var_y = (u_var * i_var + u_var * i_mu.pow(2) + u_mu.pow(2) * i_var).sum(dim=-1)
-        out.append(var_y.detach().cpu().numpy())
-    return np.concatenate(out)
-
-
 def match_clean_noisy_edges(clean_edges, noisy_edges, max_pairs, seed):
     clean_by_user = {}
     for user, item in np.asarray(clean_edges, dtype=np.int64).reshape(-1, 2):
@@ -332,12 +297,12 @@ def aggregate_paired_by_user(user_ids, clean_values, noisy_values):
     return unique_users, clean_user, noisy_user
 
 
-def format_p_value(p_value):
-    if not np.isfinite(p_value):
-        return "p=n/a"
-    if p_value < 1e-4:
-        return "p<1e-4"
-    return f"p={p_value:.2e}"
+def sample_uncertainty_pair(edges, seed):
+    rng = np.random.default_rng(seed)
+    pair_idx = int(rng.integers(len(edges)))
+    user_id = int(edges[pair_idx, 0])
+    item_id = int(edges[pair_idx, 1])
+    return pair_idx, user_id, item_id
 
 
 def run_motivation(args, noise_ratio, save_root, max_samples):
@@ -398,6 +363,16 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     mean_noisy_dim = noisy_dim_unc.mean(axis=0)
     mean_delta_dim = mean_noisy_dim - mean_clean_dim
     dim_order = np.argsort(mean_delta_dim)[::-1]
+    heat_pair_idx, heat_user_id, heat_item_id = sample_uncertainty_pair(
+        bundle["n_params"]["clean_train_cf"],
+        args.seed + 2026,
+    )
+    user_init_var = torch.exp(2.0 * bundle["model"].user_logsigma).detach().cpu().numpy()
+    item_init_var = torch.exp(2.0 * bundle["model"].item_logsigma).detach().cpu().numpy()
+    heatmap_values = np.vstack([
+        user_init_var[heat_user_id],
+        item_init_var[heat_item_id],
+    ])
 
     dimension_rows = []
     for rank, dim in enumerate(dim_order):
@@ -416,11 +391,28 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
             "mean_noisy_variance_contribution", "mean_delta_noisy_minus_clean",
         ],
     )
+    write_csv(
+        save_dir / "sampled_pair_dimension_heatmap.csv",
+        [
+            {
+                "pair_index": heat_pair_idx,
+                "source": "clean_train_cf",
+                "entity": entity,
+                "entity_id": int(entity_id),
+                "dimension": int(dim),
+                "learned_initial_variance": float(value),
+            }
+            for row_idx, (entity, entity_id) in enumerate(
+                (("user", heat_user_id), ("item", heat_item_id))
+            )
+            for dim, value in enumerate(heatmap_values[row_idx])
+        ],
+        ["pair_index", "source", "entity", "entity_id", "dimension", "learned_initial_variance"],
+    )
 
     pair_user_ids = noisy_edges[:, 0]
     user_level_metrics = {}
     stats_rows = []
-    stats_by_metric = {}
     for metric, clean_values, noisy_values in [
         ("predictive_variance", clean_edge_unc, noisy_edge_unc),
         ("top20_dimension_share", clean_top_share, noisy_top_share),
@@ -436,7 +428,6 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
             **paired_stats(clean_user_values, noisy_user_values),
         }
         stats_rows.append(metric_stats)
-        stats_by_metric[metric] = metric_stats
     write_csv(save_dir / "motivation_statistics.csv", stats_rows, list(stats_rows[0].keys()))
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
@@ -451,27 +442,26 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$")
     axes[0].grid(axis="y", alpha=0.25)
 
-    clean_top_user, noisy_top_user = user_level_metrics["top20_dimension_share"]
-    top20_stats = stats_by_metric["top20_dimension_share"]
-    axes[1].boxplot(
-        [clean_top_user, noisy_top_user],
-        labels=["Matched clean", "Injected noisy"],
-        showfliers=False,
-        patch_artist=True,
-    )
-    axes[1].set_title(f"(b) Concentration in top-20% dimensions\n{format_p_value(top20_stats['wilcoxon_p'])}")
-    axes[1].set_ylabel("Top-20% dimension share")
-    axes[1].grid(axis="y", alpha=0.25)
-
     x = np.arange(len(dim_order))
     sorted_delta = mean_delta_dim[dim_order]
     colors = np.where(sorted_delta >= 0, "#C44E52", "#4C72B0")
-    axes[2].bar(x, sorted_delta, color=colors, width=0.85)
-    axes[2].axhline(0.0, color="black", linewidth=1)
-    axes[2].set_title("(c) Dimension localization of noisy uncertainty")
-    axes[2].set_xlabel("Dimensions sorted by mean noisy-clean delta")
-    axes[2].set_ylabel(r"Mean $\Delta V_k$ (noisy - clean)")
-    axes[2].grid(axis="y", alpha=0.25)
+    axes[1].bar(x, sorted_delta, color=colors, width=0.85)
+    axes[1].axhline(0.0, color="black", linewidth=1)
+    axes[1].set_title("(b) Dimension localization of noisy uncertainty")
+    axes[1].set_xlabel("Dimensions sorted by mean noisy-clean delta")
+    axes[1].set_ylabel(r"Mean $\Delta V_k$ (noisy - clean)")
+    axes[1].grid(axis="y", alpha=0.25)
+
+    im = axes[2].imshow(
+        heatmap_values,
+        aspect="auto",
+        cmap="YlOrRd",
+    )
+    axes[2].set_title("(c) Sampled interaction uncertainty heatmap")
+    axes[2].set_xlabel("Embedding dimension")
+    axes[2].set_yticks([0, 1])
+    axes[2].set_yticklabels([f"User {heat_user_id}", f"Item {heat_item_id}"])
+    fig.colorbar(im, ax=axes[2], label="Learned initial variance")
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
@@ -481,257 +471,9 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
 
 
-def pearson_corr(x, y):
-    x = np.asarray(x, dtype=np.float64)
-    y = np.asarray(y, dtype=np.float64)
-    if len(x) < 2 or np.std(x) == 0 or np.std(y) == 0:
-        return np.nan, np.nan
-    try:
-        from scipy.stats import pearsonr
-        r, p = pearsonr(x, y)
-        return float(r), float(p)
-    except Exception:
-        return float(np.corrcoef(x, y)[0, 1]), np.nan
-
-
-def spearman_corr(x, y):
-    try:
-        from scipy.stats import spearmanr
-        r, p = spearmanr(x, y)
-        return float(r), float(p)
-    except Exception:
-        return np.nan, np.nan
-
-
-def mann_whitney(clean_values, noisy_values):
-    if len(clean_values) == 0 or len(noisy_values) == 0:
-        return np.nan, np.nan
-    try:
-        from scipy.stats import mannwhitneyu
-        stat, p = mannwhitneyu(clean_values, noisy_values, alternative="two-sided")
-        return float(stat), float(p)
-    except Exception:
-        return np.nan, np.nan
-
-
-def run_noise_uncertainty(args, noise_ratios, save_root, edge_sample_size):
-    save_dir = Path(save_root) / "noise_uncertainty"
-    ensure_dir(save_dir)
-
-    summary_rows = []
-    sample_rows = []
-    burden_rows = []
-    burden_corr_rows = []
-    all_clean_unc = []
-    all_noisy_unc = []
-
-    for noise_ratio in noise_ratios:
-        bundle = load_model_bundle(noise_ratio, args)
-        reps = representations(bundle["model"])
-        raw_user_var_mean = float(torch.exp(2 * bundle["model"].user_logsigma).mean().detach().cpu().item())
-        raw_item_var_mean = float(torch.exp(2 * bundle["model"].item_logsigma).mean().detach().cpu().item())
-        post_user_var = reps["user_var"].mean(dim=1).detach().cpu().numpy()
-        post_item_var = reps["item_var"].mean(dim=1).detach().cpu().numpy()
-        post_user_var_mean = float(np.mean(post_user_var))
-        post_item_var_mean = float(np.mean(post_item_var))
-
-        clean_edges = sample_edges(
-            bundle["n_params"]["clean_train_cf"], edge_sample_size, args.seed + int(float(noise_ratio) * 1000)
-        )
-        noisy_edges = sample_edges(
-            bundle["n_params"]["injected_noise_edges"], edge_sample_size, args.seed + 17 + int(float(noise_ratio) * 1000)
-        )
-        clean_unc = predictive_uncertainty(clean_edges, reps, bundle["device"])
-        noisy_unc = predictive_uncertainty(noisy_edges, reps, bundle["device"])
-
-        if len(bundle["n_params"]["injected_noise_edges"]) > 0:
-            noise_counts = np.bincount(
-                bundle["n_params"]["injected_noise_edges"][:, 0],
-                minlength=bundle["n_params"]["n_users"],
-            )
-            mask = noise_counts > 0
-            pearson_r, pearson_p = pearson_corr(noise_counts[mask], post_user_var[mask])
-            spearman_r, spearman_p = spearman_corr(noise_counts[mask], post_user_var[mask])
-            burden_corr_rows.append({
-                "noise_ratio": float(noise_ratio),
-                "num_users_with_noise": int(mask.sum()),
-                "pearson_r": pearson_r,
-                "pearson_p": pearson_p,
-                "spearman_r": spearman_r,
-                "spearman_p": spearman_p,
-            })
-            for user_id in np.where(mask)[0]:
-                burden_rows.append({
-                    "noise_ratio": float(noise_ratio),
-                    "user_id": int(user_id),
-                    "noise_count": int(noise_counts[user_id]),
-                    "mean_user_variance": float(post_user_var[user_id]),
-                })
-
-        if len(clean_unc) > 0:
-            all_clean_unc.append(clean_unc)
-        if len(noisy_unc) > 0:
-            all_noisy_unc.append(noisy_unc)
-
-        summary_rows.append({
-            "noise_ratio": float(noise_ratio),
-            "mean_raw_user_variance": raw_user_var_mean,
-            "mean_raw_item_variance": raw_item_var_mean,
-            "mean_post_user_variance": post_user_var_mean,
-            "mean_post_item_variance": post_item_var_mean,
-            "mean_clean_edge_uncertainty": float(np.mean(clean_unc)) if len(clean_unc) else np.nan,
-            "mean_noisy_edge_uncertainty": float(np.mean(noisy_unc)) if len(noisy_unc) else np.nan,
-            "num_clean_edge_samples": int(len(clean_unc)),
-            "num_noisy_edge_samples": int(len(noisy_unc)),
-        })
-
-        for value in clean_unc:
-            sample_rows.append({"noise_ratio": float(noise_ratio), "edge_type": "clean", "predictive_uncertainty": float(value)})
-        for value in noisy_unc:
-            sample_rows.append({"noise_ratio": float(noise_ratio), "edge_type": "noisy", "predictive_uncertainty": float(value)})
-
-    write_csv(
-        save_dir / "variance_vs_noise_ratio.csv",
-        summary_rows,
-        [
-            "noise_ratio", "mean_raw_user_variance", "mean_raw_item_variance",
-            "mean_post_user_variance", "mean_post_item_variance",
-            "mean_clean_edge_uncertainty", "mean_noisy_edge_uncertainty",
-            "num_clean_edge_samples", "num_noisy_edge_samples",
-        ],
-    )
-    write_csv(
-        save_dir / "clean_vs_noisy_uncertainty.csv",
-        sample_rows,
-        ["noise_ratio", "edge_type", "predictive_uncertainty"],
-    )
-    write_csv(
-        save_dir / "user_noise_burden.csv",
-        burden_rows,
-        ["noise_ratio", "user_id", "noise_count", "mean_user_variance"],
-    )
-    write_csv(
-        save_dir / "noise_burden_correlation.csv",
-        burden_corr_rows,
-        ["noise_ratio", "num_users_with_noise", "pearson_r", "pearson_p", "spearman_r", "spearman_p"],
-    )
-
-    x = np.array([row["noise_ratio"] for row in summary_rows])
-    raw_user_y = np.array([row["mean_raw_user_variance"] for row in summary_rows])
-    raw_item_y = np.array([row["mean_raw_item_variance"] for row in summary_rows])
-    post_user_y = np.array([row["mean_post_user_variance"] for row in summary_rows])
-    post_item_y = np.array([row["mean_post_item_variance"] for row in summary_rows])
-    fig, ax = plt.subplots(figsize=(8.5, 5))
-    ax.plot(x, raw_user_y, marker="o", linestyle="--", linewidth=2, label="Raw user variance")
-    ax.plot(x, raw_item_y, marker="s", linestyle="--", linewidth=2, label="Raw item variance")
-    ax.plot(x, post_user_y, marker="o", linewidth=2, label="Post-GCN user variance")
-    ax.plot(x, post_item_y, marker="s", linewidth=2, label="Post-GCN item variance")
-    ax.set_title("Mean Variance under Different Noise Ratios")
-    ax.set_xlabel("Noise ratio")
-    ax.set_ylabel("Mean variance")
-    ax.legend()
-    ax.grid(alpha=0.25)
-    fig.tight_layout()
-    fig.savefig(save_dir / "variance_vs_noise_ratio.png", dpi=220)
-    plt.close(fig)
-
-    plot_data = []
-    labels = []
-    positions = []
-    pos = 1
-    for row in summary_rows:
-        ratio = row["noise_ratio"]
-        clean_values = [r["predictive_uncertainty"] for r in sample_rows if r["noise_ratio"] == ratio and r["edge_type"] == "clean"]
-        noisy_values = [r["predictive_uncertainty"] for r in sample_rows if r["noise_ratio"] == ratio and r["edge_type"] == "noisy"]
-        if clean_values:
-            plot_data.append(clean_values)
-            labels.append(f"{ratio:g}\nclean")
-            positions.append(pos)
-            pos += 1
-        if noisy_values:
-            plot_data.append(noisy_values)
-            labels.append(f"{ratio:g}\nnoisy")
-            positions.append(pos)
-            pos += 1
-        pos += 0.5
-
-    if plot_data:
-        fig, ax = plt.subplots(figsize=(max(9, len(plot_data) * 0.8), 5.5))
-        ax.boxplot(plot_data, positions=positions, showfliers=False, patch_artist=True)
-        ax.set_title("Predictive Uncertainty of Clean vs Injected Noisy Edges")
-        ax.set_xlabel("Noise ratio / edge type")
-        ax.set_ylabel("Predictive uncertainty Var[Y_ui]")
-        ax.set_xticks(positions)
-        ax.set_xticklabels(labels)
-        ax.grid(axis="y", alpha=0.25)
-        fig.tight_layout()
-        fig.savefig(save_dir / "clean_vs_noisy_uncertainty.png", dpi=220)
-        plt.close(fig)
-
-    if burden_rows:
-        fig, ax = plt.subplots(figsize=(8.5, 5.5))
-        for ratio in sorted({row["noise_ratio"] for row in burden_rows}):
-            rows = [row for row in burden_rows if row["noise_ratio"] == ratio]
-            counts = sorted({row["noise_count"] for row in rows})
-            xs, ys = [], []
-            for count in counts:
-                vals = [row["mean_user_variance"] for row in rows if row["noise_count"] == count]
-                if len(vals) >= 10:
-                    xs.append(count)
-                    ys.append(float(np.mean(vals)))
-            if xs:
-                ax.plot(xs, ys, marker="o", linewidth=1.8, label=f"noise={ratio:g}")
-        ax.set_title("Users with More Injected Noise Show Higher Uncertainty")
-        ax.set_xlabel("Injected noisy interactions per user")
-        ax.set_ylabel("Mean post-GCN user variance")
-        ax.grid(alpha=0.25)
-        ax.legend()
-        fig.tight_layout()
-        fig.savefig(save_dir / "user_noise_burden_scatter.png", dpi=220)
-        plt.close(fig)
-
-    all_clean = np.concatenate(all_clean_unc) if all_clean_unc else np.array([])
-    all_noisy = np.concatenate(all_noisy_unc) if all_noisy_unc else np.array([])
-    mw_stat, mw_p = mann_whitney(all_clean, all_noisy)
-
-    corr_rows = []
-    for metric, values in [
-        ("mean_raw_user_variance", raw_user_y),
-        ("mean_raw_item_variance", raw_item_y),
-        ("mean_post_user_variance", post_user_y),
-        ("mean_post_item_variance", post_item_y),
-        ("mean_clean_edge_uncertainty", np.array([row["mean_clean_edge_uncertainty"] for row in summary_rows])),
-        ("mean_noisy_edge_uncertainty", np.array([row["mean_noisy_edge_uncertainty"] for row in summary_rows])),
-    ]:
-        mask = np.isfinite(values)
-        pearson_r, pearson_p = pearson_corr(x[mask], values[mask])
-        spearman_r, spearman_p = spearman_corr(x[mask], values[mask])
-        corr_rows.append({
-            "metric": metric,
-            "pearson_r": pearson_r,
-            "pearson_p": pearson_p,
-            "spearman_r": spearman_r,
-            "spearman_p": spearman_p,
-            "mannwhitney_stat_clean_vs_noisy": mw_stat if metric == "mean_noisy_edge_uncertainty" else "",
-            "mannwhitney_p_clean_vs_noisy": mw_p if metric == "mean_noisy_edge_uncertainty" else "",
-        })
-    write_csv(
-        save_dir / "correlation_stats.csv",
-        corr_rows,
-        [
-            "metric", "pearson_r", "pearson_p", "spearman_r", "spearman_p",
-            "mannwhitney_stat_clean_vs_noisy", "mannwhitney_p_clean_vs_noisy",
-        ],
-    )
-
-    print(f"Saved noise-uncertainty figures and CSV files to {save_dir}")
-
-
 def main():
     parser = argparse.ArgumentParser(description="UnGGCN visual experiments")
-    parser.add_argument("--experiment", choices=["motivation", "noise_uncertainty"], required=True)
     parser.add_argument("--noise_ratio", type=float, default=0.3)
-    parser.add_argument("--noise_ratios", type=float, nargs="+", default=[0.0,0.3])
     parser.add_argument("--save_dir", type=str, default="./analysis_results/")
     parser.add_argument(
         "--max_samples",
@@ -739,17 +481,13 @@ def main():
         default=5000,
         help="maximum number of same-user clean/noisy pairs in the motivation experiment",
     )
-    parser.add_argument("--edge_sample_size", type=int, default=5000)
     known, remaining = parser.parse_known_args()
 
     sys.argv = [sys.argv[0]] + remaining
     args = model_parse_args()
     set_seed(args.seed)
 
-    if known.experiment == "motivation":
-        run_motivation(args, known.noise_ratio, known.save_dir, known.max_samples)
-    else:
-        run_noise_uncertainty(args, sorted(known.noise_ratios), known.save_dir, known.edge_sample_size)
+    run_motivation(args, known.noise_ratio, known.save_dir, known.max_samples)
 
 
 if __name__ == "__main__":
