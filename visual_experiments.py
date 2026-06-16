@@ -19,7 +19,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from modules.UnGGSL import UnGGSL
 from utils.data_loader import load_data
@@ -207,10 +206,6 @@ def representations(model):
     }
 
 
-def attention_from_variance(var, beta):
-    return F.softplus(-var, beta=beta)
-
-
 def sample_edges(edges, max_edges, seed):
     if edges is None or len(edges) == 0:
         return np.empty((0, 2), dtype=np.int32)
@@ -337,6 +332,22 @@ def aggregate_paired_by_user(user_ids, clean_values, noisy_values):
     return unique_users, clean_user, noisy_user
 
 
+def dimension_profile(values):
+    values = np.asarray(values, dtype=np.float64)
+    mean_by_dim = values.mean(axis=0)
+    dim_order = np.argsort(mean_by_dim)[::-1]
+    sorted_mean = mean_by_dim[dim_order]
+    top_k = max(1, int(math.ceil(len(sorted_mean) * 0.2)))
+    return {
+        "dim_order": dim_order,
+        "sorted_mean": sorted_mean,
+        "mean": float(mean_by_dim.mean()),
+        "std": float(mean_by_dim.std()),
+        "cv": float(mean_by_dim.std() / mean_by_dim.mean()) if mean_by_dim.mean() > 0 else np.nan,
+        "top20_share": float(sorted_mean[:top_k].sum() / sorted_mean.sum()) if sorted_mean.sum() > 0 else np.nan,
+    }
+
+
 def run_motivation(args, noise_ratio, save_root, max_samples):
     if noise_ratio <= 0:
         raise ValueError("The motivation experiment requires --noise_ratio > 0.")
@@ -362,10 +373,6 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     clean_top_share, clean_entropy = concentration_metrics(clean_dim_unc)
     noisy_top_share, noisy_entropy = concentration_metrics(noisy_dim_unc)
 
-    log_delta = np.log(noisy_dim_unc + 1e-12) - np.log(clean_dim_unc + 1e-12)
-    pair_order = np.argsort(log_delta.mean(axis=1))[::-1]
-    dim_order = np.argsort(log_delta.mean(axis=0))[::-1]
-    heatmap_sorted = log_delta[pair_order[:min(40, len(pair_order))]][:, dim_order]
     save_dir = Path(save_root) / "motivation"
     ensure_dir(save_dir)
 
@@ -395,31 +402,44 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         ],
     )
 
-    mean_clean_dim = clean_dim_unc.mean(axis=0)
-    mean_noisy_dim = noisy_dim_unc.mean(axis=0)
-    user_ids = torch.as_tensor(noisy_edges[:, 0], dtype=torch.long, device=bundle["device"])
-    item_ids = torch.as_tensor(noisy_edges[:, 1], dtype=torch.long, device=bundle["device"])
-    endpoint_var = torch.cat([reps["user_var"][user_ids], reps["item_var"][item_ids]], dim=0)
-    endpoint_weight = attention_from_variance(endpoint_var, args.beta)
-    flat_var = endpoint_var.detach().cpu().numpy().reshape(-1)
-    flat_weight = endpoint_weight.detach().cpu().numpy().reshape(-1)
+    user_init_var = torch.exp(2.0 * bundle["model"].user_logsigma).detach().cpu().numpy()
+    item_init_var = torch.exp(2.0 * bundle["model"].item_logsigma).detach().cpu().numpy()
+    user_profile = dimension_profile(user_init_var)
+    item_profile = dimension_profile(item_init_var)
 
     dimension_rows = []
-    for rank, dim in enumerate(dim_order):
-        dimension_rows.append({
-            "dimension": int(dim),
-            "dimension_rank": int(rank),
-            "mean_clean_variance_contribution": float(mean_clean_dim[dim]),
-            "mean_noisy_variance_contribution": float(mean_noisy_dim[dim]),
-            "mean_log_ratio": float(log_delta[:, dim].mean()),
-        })
+    for entity, profile in (("user", user_profile), ("item", item_profile)):
+        for rank, dim in enumerate(profile["dim_order"]):
+            dimension_rows.append({
+                "entity": entity,
+                "dimension": int(dim),
+                "dimension_rank": int(rank),
+                "mean_learned_initial_variance": float(profile["sorted_mean"][rank]),
+            })
     write_csv(
         save_dir / "dimension_uncertainty_summary.csv",
         dimension_rows,
+        ["entity", "dimension", "dimension_rank", "mean_learned_initial_variance"],
+    )
+    write_csv(
+        save_dir / "dimension_profile_stats.csv",
         [
-            "dimension", "dimension_rank", "mean_clean_variance_contribution",
-            "mean_noisy_variance_contribution", "mean_log_ratio",
+            {
+                "entity": "user",
+                "mean": user_profile["mean"],
+                "std": user_profile["std"],
+                "cv": user_profile["cv"],
+                "top20_share": user_profile["top20_share"],
+            },
+            {
+                "entity": "item",
+                "mean": item_profile["mean"],
+                "std": item_profile["std"],
+                "cv": item_profile["cv"],
+                "top20_share": item_profile["top20_share"],
+            },
         ],
+        ["entity", "mean", "std", "cv", "top20_share"],
     )
 
     pair_user_ids = noisy_edges[:, 0]
@@ -441,7 +461,7 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         })
     write_csv(save_dir / "motivation_statistics.csv", stats_rows, list(stats_rows[0].keys()))
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.8))
     clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
     axes[0].boxplot(
         [clean_user_unc, noisy_user_unc],
@@ -453,35 +473,29 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$")
     axes[0].grid(axis="y", alpha=0.25)
 
-    max_abs = max(float(np.percentile(np.abs(heatmap_sorted), 95)), 1e-6)
-    im = axes[1].imshow(
-        heatmap_sorted,
-        aspect="auto",
-        cmap="coolwarm",
-        vmin=-max_abs,
-        vmax=max_abs,
+    x_user = np.arange(1, len(user_profile["sorted_mean"]) + 1)
+    x_item = np.arange(1, len(item_profile["sorted_mean"]) + 1)
+    axes[1].plot(
+        x_user,
+        user_profile["sorted_mean"],
+        marker="o",
+        markersize=3,
+        linewidth=2,
+        label=f"User (CV={user_profile['cv']:.3f})",
     )
-    axes[1].set_title("(b) Dimension-wise uncertainty shift")
-    axes[1].set_xlabel("Dimensions sorted by mean shift")
-    axes[1].set_ylabel("Matched interaction pairs")
-    fig.colorbar(im, ax=axes[1], label="log noisy / clean contribution")
-
-    quantile_edges = np.unique(np.quantile(flat_var, np.linspace(0, 1, 11)))
-    if len(quantile_edges) > 1:
-        bin_ids = np.digitize(flat_var, quantile_edges[1:-1], right=True)
-        bin_x = []
-        bin_y = []
-        for idx in range(len(quantile_edges) - 1):
-            mask = bin_ids == idx
-            if np.any(mask):
-                bin_x.append(float(np.median(flat_var[mask])))
-                bin_y.append(float(np.mean(flat_weight[mask])))
-        axes[2].plot(bin_x, bin_y, marker="o", linewidth=2, color="#4C72B0")
-    axes[2].set_xscale("log")
-    axes[2].set_title("(c) Variance-guided attenuation")
-    axes[2].set_xlabel("Endpoint variance (quantile-bin median)")
-    axes[2].set_ylabel("Message-passing weight")
-    axes[2].grid(alpha=0.25)
+    axes[1].plot(
+        x_item,
+        item_profile["sorted_mean"],
+        marker="s",
+        markersize=3,
+        linewidth=2,
+        label=f"Item (CV={item_profile['cv']:.3f})",
+    )
+    axes[1].set_title("(b) Dimension-wise learned variance profile")
+    axes[1].set_xlabel("Embedding dimensions sorted by mean variance")
+    axes[1].set_ylabel("Mean learned initial variance")
+    axes[1].grid(alpha=0.25)
+    axes[1].legend()
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
