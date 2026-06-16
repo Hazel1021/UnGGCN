@@ -484,15 +484,26 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     tick_fontsize = 12
     colorbar_fontsize = 12
     title_pad = 14
+    box_face_color = "#3182BD"
+    box_median_color = "#FD8D3B"
+    bar_positive_color = "#339FC4"
+    bar_negative_color = "#ED7D32"
+    heatmap_cmap = "YlGnBu"
 
     fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.2))
     clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
-    axes[0].boxplot(
+    box = axes[0].boxplot(
         [clean_user_unc, noisy_user_unc],
         labels=["Matched clean", "Injected noisy"],
         showfliers=False,
         patch_artist=True,
     )
+    for patch in box["boxes"]:
+        patch.set_facecolor(box_face_color)
+        patch.set_alpha(0.9)
+    for median in box["medians"]:
+        median.set_color(box_median_color)
+        median.set_linewidth(1.8)
     axes[0].set_title(
         "(a) User-level predictive uncertainty",
         fontsize=title_fontsize,
@@ -505,7 +516,7 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
 
     x = np.arange(len(dim_order))
     sorted_delta = mean_delta_dim[dim_order]
-    colors = np.where(sorted_delta >= 0, "#C44E52", "#4C72B0")
+    colors = np.where(sorted_delta >= 0, bar_positive_color, bar_negative_color)
     axes[1].bar(x, sorted_delta, color=colors, width=0.85)
     axes[1].axhline(0.0, color="black", linewidth=1)
     axes[1].set_title(
@@ -522,7 +533,7 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     im = axes[2].imshow(
         heatmap_values,
         aspect="auto",
-        cmap="YlOrRd",
+        cmap=heatmap_cmap,
     )
     axes[2].set_title(
         "(c) Sampled noisy interaction uncertainty heatmap",
