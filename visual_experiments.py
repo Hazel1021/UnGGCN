@@ -491,23 +491,14 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[1].grid(axis="y", alpha=0.25)
 
     im = axes[2].imshow(
-        heatmap_values.T,
+        heatmap_values,
         aspect="auto",
         cmap="YlOrRd",
     )
     axes[2].set_title("(c) Sampled noisy interaction uncertainty heatmap")
-    axes[2].set_ylabel("Embedding dimension")
-    axes[2].set_xticks([0, 1])
-    axes[2].set_xticklabels(["User", "Item"])
-    axes[2].set_xlabel("")
-    axes[2].text(
-        0.0, 1.04, f"User: {heat_user_org_id}",
-        transform=axes[2].transAxes, ha="center", va="bottom", fontsize=7,
-    )
-    axes[2].text(
-        1.0, -0.13, f"Item: {heat_item_org_id}",
-        transform=axes[2].transAxes, ha="center", va="top", fontsize=8,
-    )
+    axes[2].set_xlabel("Embedding dimension")
+    axes[2].set_yticks([0, 1])
+    axes[2].set_yticklabels(["User", "Item"])
     fig.colorbar(im, ax=axes[2], label="Learned initial variance")
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
@@ -516,6 +507,11 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     plt.close(fig)
 
     print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
+    print(
+        "Sampled noisy pair for subplot (c): "
+        f"user remap_id={heat_user_id}, org_id={heat_user_org_id}; "
+        f"item remap_id={heat_item_id}, org_id={heat_item_org_id}"
+    )
 
 
 def main():
