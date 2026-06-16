@@ -498,7 +498,10 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[2].set_title("(c) Sampled noisy interaction uncertainty heatmap")
     axes[2].set_xlabel("Embedding dimension")
     axes[2].set_yticks([0, 1])
-    axes[2].set_yticklabels(["User", "Item"])
+    axes[2].set_yticklabels([
+        f"User {heat_user_id}",
+        f"Item {heat_item_id}",
+    ])
     fig.colorbar(im, ax=axes[2], label="Learned initial variance")
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
