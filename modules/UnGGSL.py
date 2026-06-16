@@ -78,17 +78,17 @@ class UnGGSL(nn.Module):
         all_var = torch.exp(2 * all_logsigma)
 
         
-        out_mean, out_var = self.gcn_encoder(
-            all_mu,
-            all_var,
-            self.sparse_norm_adj,
-            self.sparse_norm_adj_var,
-            tb_writer=tb_writer,
-            global_step=global_step
-        )
+        # out_mean, out_var = self.gcn_encoder(
+        #     all_mu,
+        #     all_var,
+        #     self.sparse_norm_adj,
+        #     self.sparse_norm_adj_var,
+        #     tb_writer=tb_writer,
+        #     global_step=global_step
+        # )
 
-
-        return out_mean, out_var
+        return all_mu,all_var
+        # return out_mean, out_var
 
     def forward(self, batch=None):
         user = batch['users']
