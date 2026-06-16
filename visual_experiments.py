@@ -332,20 +332,12 @@ def aggregate_paired_by_user(user_ids, clean_values, noisy_values):
     return unique_users, clean_user, noisy_user
 
 
-def dimension_profile(values):
-    values = np.asarray(values, dtype=np.float64)
-    mean_by_dim = values.mean(axis=0)
-    dim_order = np.argsort(mean_by_dim)[::-1]
-    sorted_mean = mean_by_dim[dim_order]
-    top_k = max(1, int(math.ceil(len(sorted_mean) * 0.2)))
-    return {
-        "dim_order": dim_order,
-        "sorted_mean": sorted_mean,
-        "mean": float(mean_by_dim.mean()),
-        "std": float(mean_by_dim.std()),
-        "cv": float(mean_by_dim.std() / mean_by_dim.mean()) if mean_by_dim.mean() > 0 else np.nan,
-        "top20_share": float(sorted_mean[:top_k].sum() / sorted_mean.sum()) if sorted_mean.sum() > 0 else np.nan,
-    }
+def sample_uncertainty_pair(edges, seed):
+    rng = np.random.default_rng(seed)
+    pair_idx = int(rng.integers(len(edges)))
+    user_id = int(edges[pair_idx, 0])
+    item_id = int(edges[pair_idx, 1])
+    return pair_idx, user_id, item_id
 
 
 def run_motivation(args, noise_ratio, save_root, max_samples):
@@ -404,42 +396,48 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
 
     user_init_var = torch.exp(2.0 * bundle["model"].user_logsigma).detach().cpu().numpy()
     item_init_var = torch.exp(2.0 * bundle["model"].item_logsigma).detach().cpu().numpy()
-    user_profile = dimension_profile(user_init_var)
-    item_profile = dimension_profile(item_init_var)
+    heat_pair_idx, heat_user_id, heat_item_id = sample_uncertainty_pair(
+        bundle["n_params"]["clean_train_cf"],
+        args.seed + 2026,
+    )
+    heatmap_values = np.vstack([
+        user_init_var[heat_user_id],
+        item_init_var[heat_item_id],
+    ])
 
     dimension_rows = []
-    for entity, profile in (("user", user_profile), ("item", item_profile)):
-        for rank, dim in enumerate(profile["dim_order"]):
+    for row_idx, (entity, entity_id) in enumerate(
+        (("user", heat_user_id), ("item", heat_item_id))
+    ):
+        for dim, value in enumerate(heatmap_values[row_idx]):
             dimension_rows.append({
                 "entity": entity,
+                "entity_id": int(entity_id),
                 "dimension": int(dim),
-                "dimension_rank": int(rank),
-                "mean_learned_initial_variance": float(profile["sorted_mean"][rank]),
+                "learned_initial_variance": float(value),
             })
     write_csv(
         save_dir / "dimension_uncertainty_summary.csv",
         dimension_rows,
-        ["entity", "dimension", "dimension_rank", "mean_learned_initial_variance"],
+        ["entity", "entity_id", "dimension", "learned_initial_variance"],
     )
     write_csv(
-        save_dir / "dimension_profile_stats.csv",
+        save_dir / "dimension_heatmap_pair.csv",
         [
             {
+                "pair_index": heat_pair_idx,
+                "source": "clean_train_cf",
                 "entity": "user",
-                "mean": user_profile["mean"],
-                "std": user_profile["std"],
-                "cv": user_profile["cv"],
-                "top20_share": user_profile["top20_share"],
+                "entity_id": heat_user_id,
             },
             {
+                "pair_index": heat_pair_idx,
+                "source": "clean_train_cf",
                 "entity": "item",
-                "mean": item_profile["mean"],
-                "std": item_profile["std"],
-                "cv": item_profile["cv"],
-                "top20_share": item_profile["top20_share"],
+                "entity_id": heat_item_id,
             },
         ],
-        ["entity", "mean", "std", "cv", "top20_share"],
+        ["pair_index", "source", "entity", "entity_id"],
     )
 
     pair_user_ids = noisy_edges[:, 0]
@@ -473,29 +471,16 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$")
     axes[0].grid(axis="y", alpha=0.25)
 
-    x_user = np.arange(1, len(user_profile["sorted_mean"]) + 1)
-    x_item = np.arange(1, len(item_profile["sorted_mean"]) + 1)
-    axes[1].plot(
-        x_user,
-        user_profile["sorted_mean"],
-        marker="o",
-        markersize=3,
-        linewidth=2,
-        label=f"User (CV={user_profile['cv']:.3f})",
+    im = axes[1].imshow(
+        heatmap_values,
+        aspect="auto",
+        cmap="YlOrRd",
     )
-    axes[1].plot(
-        x_item,
-        item_profile["sorted_mean"],
-        marker="s",
-        markersize=3,
-        linewidth=2,
-        label=f"Item (CV={item_profile['cv']:.3f})",
-    )
-    axes[1].set_title("(b) Dimension-wise learned variance profile")
-    axes[1].set_xlabel("Embedding dimensions sorted by mean variance")
-    axes[1].set_ylabel("Mean learned initial variance")
-    axes[1].grid(alpha=0.25)
-    axes[1].legend()
+    axes[1].set_title("(b) Dimension-wise learned uncertainty of a sampled interaction")
+    axes[1].set_xlabel("Embedding dimension")
+    axes[1].set_yticks([0, 1])
+    axes[1].set_yticklabels([f"User {heat_user_id}", f"Item {heat_item_id}"])
+    fig.colorbar(im, ax=axes[1], label="Learned initial variance")
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
