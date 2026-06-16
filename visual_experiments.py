@@ -46,51 +46,110 @@ def write_csv(path, rows, fieldnames):
         writer.writerows(rows)
 
 
-def checkpoint_candidates(args):
-    model_dir = Path(args.model_dir) / args.dataset
-    exact = model_dir / (
-        f"modelmodel_dataset_{args.dataset}_dim{args.dim}_hops{args.context_hops}"
-        f"_lr{args.lr}_lw{args.lw}_beta{args.beta}"
-        f"_prioralpha{args.prior_alpha}_priorbeta{args.prior_beta}"
-        f"_noise_{args.noise_ratio}.ckpt"
-    )
-    if exact.exists():
-        return [exact]
+def expected_checkpoint_names(args):
+    return [
+        (
+            f"modelmodel_dataset_{args.dataset}_dim{args.dim}"
+            f"_hops{args.context_hops}_lr{args.lr}_lw{args.lw}"
+            f"_beta{args.beta}_prioralpha{args.prior_alpha}"
+            f"_priorbeta{args.prior_beta}_noise_{args.noise_ratio}.ckpt"
+        ),
+        (
+            f"model_dataset_{args.dataset}_noise_{args.noise_ratio}"
+            f"_dim{args.dim}_hops{args.context_hops}"
+            f"_beta{args.beta}_lr{args.lr}.ckpt"
+        ),
+    ]
 
-    pattern = re.compile(
-        rf"^modelmodel_dataset_{re.escape(args.dataset)}_dim(\d+)_hops(\d+)"
-        rf"_lr([^_]+)_lw([^_]+)_beta([^_]+)"
-        rf"_prioralpha([^_]+)_priorbeta([^_]+)_noise_([^_]+)\.ckpt$"
-    )
+
+def checkpoint_matches(path, args):
+    patterns = [
+        (
+            re.compile(
+                rf"^modelmodel_dataset_{re.escape(args.dataset)}"
+                rf"_dim(?P<dim>\d+)_hops(?P<hops>\d+)"
+                rf"_lr(?P<lr>[^_]+)_lw(?P<lw>[^_]+)"
+                rf"_beta(?P<beta>[^_]+)_prioralpha(?P<alpha>[^_]+)"
+                rf"_priorbeta(?P<prior_beta>[^_]+)"
+                rf"_noise_(?P<noise>[^_]+)\.ckpt$"
+            ),
+            True,
+        ),
+        (
+            re.compile(
+                rf"^model_dataset_{re.escape(args.dataset)}"
+                rf"_noise_(?P<noise>[^_]+)_dim(?P<dim>\d+)"
+                rf"_hops(?P<hops>\d+)_beta(?P<beta>[^_]+)"
+                rf"_lr(?P<lr>[^_]+)\.ckpt$"
+            ),
+            False,
+        ),
+    ]
+
+    for pattern, has_prior_config in patterns:
+        match = pattern.match(path.name)
+        if not match:
+            continue
+        values = match.groupdict()
+        try:
+            base_matches = (
+                int(values["dim"]) == int(args.dim)
+                and int(values["hops"]) == int(args.context_hops)
+                and math.isclose(float(values["lr"]), float(args.lr))
+                and math.isclose(float(values["beta"]), float(args.beta))
+                and math.isclose(float(values["noise"]), float(args.noise_ratio))
+            )
+            if not has_prior_config:
+                return base_matches
+            return (
+                base_matches
+                and math.isclose(float(values["lw"]), float(args.lw))
+                and math.isclose(float(values["alpha"]), float(args.prior_alpha))
+                and math.isclose(float(values["prior_beta"]), float(args.prior_beta))
+            )
+        except ValueError:
+            return False
+    return False
+
+
+def checkpoint_candidates(args):
+    model_root = Path(args.model_dir)
+    search_dirs = [model_root / args.dataset, model_root]
+
+    for directory in search_dirs:
+        for filename in expected_checkpoint_names(args):
+            path = directory / filename
+            if path.is_file():
+                return [path]
+
     matches = []
-    if model_dir.is_dir():
-        for path in model_dir.iterdir():
-            match = pattern.match(path.name)
-            if not match:
-                continue
-            f_dim, f_hops, f_lr, f_lw, f_beta, f_alpha, f_prior_beta, f_noise = match.groups()
-            try:
-                same_config = (
-                    math.isclose(float(f_noise), float(args.noise_ratio))
-                    and int(f_dim) == int(args.dim)
-                    and int(f_hops) == int(args.context_hops)
-                    and math.isclose(float(f_beta), float(args.beta))
-                    and math.isclose(float(f_lr), float(args.lr))
-                    and math.isclose(float(f_lw), float(args.lw))
-                    and math.isclose(float(f_alpha), float(args.prior_alpha))
-                    and math.isclose(float(f_prior_beta), float(args.prior_beta))
-                )
-            except ValueError:
-                same_config = False
-            if same_config:
-                matches.append(path)
-    return sorted(matches)
+    for directory in search_dirs:
+        if not directory.is_dir():
+            continue
+        matches.extend(
+            path for path in directory.glob("*.ckpt")
+            if checkpoint_matches(path, args)
+        )
+    return sorted(set(matches))
 
 
 def find_checkpoint(args):
     candidates = checkpoint_candidates(args)
-    if candidates:
+    if len(candidates) == 1:
         return candidates[0]
+    if len(candidates) > 1:
+        paths = "\n  ".join(str(path) for path in candidates)
+        raise RuntimeError(
+            "Multiple full-model checkpoints match the requested configuration:\n"
+            f"  {paths}"
+        )
+
+    model_root = Path(args.model_dir)
+    searched = "\n  ".join(
+        str(directory / filename)
+        for directory in (model_root / args.dataset, model_root)
+        for filename in expected_checkpoint_names(args)
+    )
     command = (
         f"python main.py --dataset {args.dataset} --noise_ratio {args.noise_ratio} "
         f"--dim {args.dim} --context_hops {args.context_hops} --beta {args.beta} "
@@ -100,8 +159,18 @@ def find_checkpoint(args):
     raise FileNotFoundError(
         f"Missing checkpoint for dataset={args.dataset}, noise_ratio={args.noise_ratio}, "
         f"configuration=(dim={args.dim}, hops={args.context_hops}, beta={args.beta}, "
-        f"lr={args.lr}). Train it with:\n  {command}"
+        f"lr={args.lr}).\nSearched:\n  {searched}\nTrain it with:\n  {command}"
     )
+
+
+def unwrap_state_dict(checkpoint):
+    if not isinstance(checkpoint, dict):
+        raise TypeError("Checkpoint must contain a state_dict-like mapping.")
+    for key in ("state_dict", "model_state_dict", "model"):
+        value = checkpoint.get(key)
+        if isinstance(value, dict):
+            return value
+    return checkpoint
 
 
 def load_model_bundle(noise_ratio, base_args):
@@ -113,7 +182,7 @@ def load_model_bundle(noise_ratio, base_args):
     model = UnGGSL(n_params, args, norm_mat, norm_mat_var).to(device)
     ckpt_path = find_checkpoint(args)
     print(f"Loading checkpoint: {ckpt_path}")
-    state = torch.load(ckpt_path, map_location=device)
+    state = unwrap_state_dict(torch.load(ckpt_path, map_location=device))
     model.load_state_dict(state)
     model.eval()
     return {
