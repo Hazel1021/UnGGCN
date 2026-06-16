@@ -332,12 +332,12 @@ def aggregate_paired_by_user(user_ids, clean_values, noisy_values):
     return unique_users, clean_user, noisy_user
 
 
-def sample_uncertainty_pair(edges, seed):
-    rng = np.random.default_rng(seed)
-    pair_idx = int(rng.integers(len(edges)))
-    user_id = int(edges[pair_idx, 0])
-    item_id = int(edges[pair_idx, 1])
-    return pair_idx, user_id, item_id
+def format_p_value(p_value):
+    if not np.isfinite(p_value):
+        return "p=n/a"
+    if p_value < 1e-4:
+        return "p<1e-4"
+    return f"p={p_value:.2e}"
 
 
 def run_motivation(args, noise_ratio, save_root, max_samples):
@@ -394,73 +394,33 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         ],
     )
 
-    user_init_var = torch.exp(2.0 * bundle["model"].user_logsigma).detach().cpu().numpy()
-    item_init_var = torch.exp(2.0 * bundle["model"].item_logsigma).detach().cpu().numpy()
-    heat_pair_idx, heat_user_id, heat_item_id = sample_uncertainty_pair(
-        bundle["n_params"]["clean_train_cf"],
-        args.seed + 2026,
-    )
-    heatmap_values = np.vstack([
-        user_init_var[heat_user_id],
-        item_init_var[heat_item_id],
-    ])
-    pair_var_contribution = dimension_uncertainty(
-        np.asarray([[heat_user_id, heat_item_id]], dtype=np.int64),
-        reps,
-        bundle["device"],
-    )[0]
+    mean_clean_dim = clean_dim_unc.mean(axis=0)
+    mean_noisy_dim = noisy_dim_unc.mean(axis=0)
+    mean_delta_dim = mean_noisy_dim - mean_clean_dim
+    dim_order = np.argsort(mean_delta_dim)[::-1]
 
     dimension_rows = []
-    for row_idx, (entity, entity_id) in enumerate(
-        (("user", heat_user_id), ("item", heat_item_id))
-    ):
-        for dim, value in enumerate(heatmap_values[row_idx]):
-            dimension_rows.append({
-                "entity": entity,
-                "entity_id": int(entity_id),
-                "dimension": int(dim),
-                "learned_initial_variance": float(value),
-            })
+    for rank, dim in enumerate(dim_order):
+        dimension_rows.append({
+            "dimension": int(dim),
+            "dimension_rank": int(rank),
+            "mean_clean_variance_contribution": float(mean_clean_dim[dim]),
+            "mean_noisy_variance_contribution": float(mean_noisy_dim[dim]),
+            "mean_delta_noisy_minus_clean": float(mean_delta_dim[dim]),
+        })
     write_csv(
         save_dir / "dimension_uncertainty_summary.csv",
         dimension_rows,
-        ["entity", "entity_id", "dimension", "learned_initial_variance"],
-    )
-    write_csv(
-        save_dir / "dimension_heatmap_pair.csv",
         [
-            {
-                "pair_index": heat_pair_idx,
-                "source": "clean_train_cf",
-                "entity": "user",
-                "entity_id": heat_user_id,
-            },
-            {
-                "pair_index": heat_pair_idx,
-                "source": "clean_train_cf",
-                "entity": "item",
-                "entity_id": heat_item_id,
-            },
+            "dimension", "dimension_rank", "mean_clean_variance_contribution",
+            "mean_noisy_variance_contribution", "mean_delta_noisy_minus_clean",
         ],
-        ["pair_index", "source", "entity", "entity_id"],
-    )
-    write_csv(
-        save_dir / "sampled_pair_predictive_variance_by_dimension.csv",
-        [
-            {
-                "user_id": heat_user_id,
-                "item_id": heat_item_id,
-                "dimension": int(dim),
-                "predictive_variance_contribution": float(value),
-            }
-            for dim, value in enumerate(pair_var_contribution)
-        ],
-        ["user_id", "item_id", "dimension", "predictive_variance_contribution"],
     )
 
     pair_user_ids = noisy_edges[:, 0]
     user_level_metrics = {}
     stats_rows = []
+    stats_by_metric = {}
     for metric, clean_values, noisy_values in [
         ("predictive_variance", clean_edge_unc, noisy_edge_unc),
         ("top20_dimension_share", clean_top_share, noisy_top_share),
@@ -470,14 +430,16 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
             pair_user_ids, clean_values, noisy_values
         )
         user_level_metrics[metric] = (clean_user_values, noisy_user_values)
-        stats_rows.append({
+        metric_stats = {
             "metric": metric,
             "analysis_unit": "user",
             **paired_stats(clean_user_values, noisy_user_values),
-        })
+        }
+        stats_rows.append(metric_stats)
+        stats_by_metric[metric] = metric_stats
     write_csv(save_dir / "motivation_statistics.csv", stats_rows, list(stats_rows[0].keys()))
 
-    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.8))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
     clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
     axes[0].boxplot(
         [clean_user_unc, noisy_user_unc],
@@ -489,31 +451,31 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$")
     axes[0].grid(axis="y", alpha=0.25)
 
-    im = axes[1].imshow(
-        heatmap_values,
-        aspect="auto",
-        cmap="YlOrRd",
+    clean_top_user, noisy_top_user = user_level_metrics["top20_dimension_share"]
+    top20_stats = stats_by_metric["top20_dimension_share"]
+    axes[1].boxplot(
+        [clean_top_user, noisy_top_user],
+        labels=["Matched clean", "Injected noisy"],
+        showfliers=False,
+        patch_artist=True,
     )
-    axes[1].set_title("(b) Dimension-wise learned uncertainty of a sampled interaction")
-    axes[1].set_xlabel("Embedding dimension")
-    axes[1].set_yticks([0, 1])
-    axes[1].set_yticklabels([f"User {heat_user_id}", f"Item {heat_item_id}"])
-    fig.colorbar(im, ax=axes[1], label="Learned initial variance")
+    axes[1].set_title(f"(b) Concentration in top-20% dimensions\n{format_p_value(top20_stats['wilcoxon_p'])}")
+    axes[1].set_ylabel("Top-20% dimension share")
+    axes[1].grid(axis="y", alpha=0.25)
+
+    x = np.arange(len(dim_order))
+    sorted_delta = mean_delta_dim[dim_order]
+    colors = np.where(sorted_delta >= 0, "#C44E52", "#4C72B0")
+    axes[2].bar(x, sorted_delta, color=colors, width=0.85)
+    axes[2].axhline(0.0, color="black", linewidth=1)
+    axes[2].set_title("(c) Dimension localization of noisy uncertainty")
+    axes[2].set_xlabel("Dimensions sorted by mean noisy-clean delta")
+    axes[2].set_ylabel(r"Mean $\Delta V_k$ (noisy - clean)")
+    axes[2].grid(axis="y", alpha=0.25)
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
     fig.savefig(save_dir / "motivation_validation.png", dpi=220)
-    plt.close(fig)
-
-    fig, ax = plt.subplots(figsize=(8.5, 2.2))
-    im = ax.imshow(pair_var_contribution.reshape(1, -1), aspect="auto", cmap="YlOrRd")
-    ax.set_title(f"Dimension-wise Predictive Variance Contribution (u={heat_user_id}, i={heat_item_id})")
-    ax.set_xlabel("Embedding dimension")
-    ax.set_yticks([0])
-    ax.set_yticklabels([r"$V_{uik}$"])
-    fig.colorbar(im, ax=ax, label=r"Contribution to $\mathrm{Var}[Y_{ui}]$")
-    fig.tight_layout()
-    fig.savefig(save_dir / "sampled_pair_predictive_variance_heatmap.png", dpi=220)
     plt.close(fig)
 
     print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
