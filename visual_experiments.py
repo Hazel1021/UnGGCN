@@ -468,7 +468,12 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         stats_rows.append(metric_stats)
     write_csv(save_dir / "motivation_statistics.csv", stats_rows, list(stats_rows[0].keys()))
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
+    title_fontsize = 15
+    label_fontsize = 13
+    tick_fontsize = 12
+    colorbar_fontsize = 12
+
+    fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.2))
     clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
     axes[0].boxplot(
         [clean_user_unc, noisy_user_unc],
@@ -476,8 +481,9 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         showfliers=False,
         patch_artist=True,
     )
-    axes[0].set_title("(a) User-level predictive uncertainty")
-    axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$")
+    axes[0].set_title("(a) User-level predictive uncertainty", fontsize=title_fontsize)
+    axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$", fontsize=label_fontsize)
+    axes[0].tick_params(axis="both", labelsize=tick_fontsize)
     axes[0].grid(axis="y", alpha=0.25)
 
     x = np.arange(len(dim_order))
@@ -485,9 +491,10 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     colors = np.where(sorted_delta >= 0, "#C44E52", "#4C72B0")
     axes[1].bar(x, sorted_delta, color=colors, width=0.85)
     axes[1].axhline(0.0, color="black", linewidth=1)
-    axes[1].set_title("(b) Dimension localization of noisy uncertainty")
-    axes[1].set_xlabel("Dimensions sorted by mean noisy-clean delta")
-    axes[1].set_ylabel(r"Mean $\Delta V_k$ (noisy - clean)")
+    axes[1].set_title("(b) Dimension localization of noisy uncertainty", fontsize=title_fontsize)
+    axes[1].set_xlabel("Dimensions sorted by mean noisy-clean delta", fontsize=label_fontsize)
+    axes[1].set_ylabel(r"Mean $\Delta V_k$ (noisy - clean)", fontsize=label_fontsize)
+    axes[1].tick_params(axis="both", labelsize=tick_fontsize)
     axes[1].grid(axis="y", alpha=0.25)
 
     im = axes[2].imshow(
@@ -495,17 +502,21 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         aspect="auto",
         cmap="YlOrRd",
     )
-    axes[2].set_title("(c) Sampled noisy interaction uncertainty heatmap")
-    axes[2].set_xlabel("Embedding dimension")
+    axes[2].set_title("(c) Sampled noisy interaction uncertainty heatmap", fontsize=title_fontsize)
+    axes[2].set_xlabel("Embedding dimension", fontsize=label_fontsize)
     axes[2].set_yticks([0, 1])
     axes[2].set_yticklabels([
         f"User {heat_user_id}",
         f"Item {heat_item_id}",
     ])
-    fig.colorbar(im, ax=axes[2], label="Learned initial variance")
+    axes[2].tick_params(axis="both", labelsize=tick_fontsize)
+    colorbar = fig.colorbar(im, ax=axes[2])
+    colorbar.set_label("Learned initial variance", fontsize=colorbar_fontsize)
+    colorbar.ax.tick_params(labelsize=tick_fontsize)
 
     fig.tight_layout()
     fig.savefig(save_dir / "motivation_validation.png", dpi=220)
+    fig.savefig(save_dir / "motivation_validation.pdf", bbox_inches="tight")
     plt.close(fig)
 
     print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
