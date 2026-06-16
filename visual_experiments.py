@@ -45,6 +45,35 @@ def write_csv(path, rows, fieldnames):
         writer.writerows(rows)
 
 
+def read_remap_list(path, item_offset=0):
+    id_map = {}
+    path = Path(path)
+    if not path.is_file():
+        return id_map
+
+    with open(path, "r") as f:
+        next(f, None)
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 2:
+                continue
+            org_id, remap_id = parts[0], int(parts[1])
+            id_map[remap_id - item_offset] = org_id
+    return id_map
+
+
+def load_original_id_maps(args, n_users):
+    data_dir = Path(args.data_path) / args.dataset
+    return {
+        "user": read_remap_list(data_dir / "user_list.txt"),
+        "item": read_remap_list(data_dir / "item_list.txt", item_offset=n_users),
+    }
+
+
+def original_id(id_map, remap_id):
+    return id_map.get(int(remap_id), str(int(remap_id)))
+
+
 def expected_checkpoint_names(args):
     return [
         (
@@ -332,14 +361,18 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
 
     save_dir = Path(save_root) / "motivation"
     ensure_dir(save_dir)
+    id_maps = load_original_id_maps(args, bundle["n_params"]["n_users"])
 
     pair_rows = []
     for pair_id, (clean_edge, noisy_edge) in enumerate(zip(clean_edges, noisy_edges)):
         pair_rows.append({
             "pair_id": pair_id,
             "user_id": int(noisy_edge[0]),
+            "user_org_id": original_id(id_maps["user"], noisy_edge[0]),
             "clean_item_id": int(clean_edge[1]),
+            "clean_item_org_id": original_id(id_maps["item"], clean_edge[1]),
             "noisy_item_id": int(noisy_edge[1]),
+            "noisy_item_org_id": original_id(id_maps["item"], noisy_edge[1]),
             "clean_predictive_variance": float(clean_edge_unc[pair_id]),
             "noisy_predictive_variance": float(noisy_edge_unc[pair_id]),
             "predictive_variance_delta": float(noisy_edge_unc[pair_id] - clean_edge_unc[pair_id]),
@@ -352,7 +385,9 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         save_dir / "paired_edge_metrics.csv",
         pair_rows,
         [
-            "pair_id", "user_id", "clean_item_id", "noisy_item_id",
+            "pair_id", "user_id", "user_org_id",
+            "clean_item_id", "clean_item_org_id",
+            "noisy_item_id", "noisy_item_org_id",
             "clean_predictive_variance", "noisy_predictive_variance", "predictive_variance_delta",
             "clean_top20_dimension_share", "noisy_top20_dimension_share",
             "clean_normalized_entropy", "noisy_normalized_entropy",
@@ -364,9 +399,11 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     mean_delta_dim = mean_noisy_dim - mean_clean_dim
     dim_order = np.argsort(mean_delta_dim)[::-1]
     heat_pair_idx, heat_user_id, heat_item_id = sample_uncertainty_pair(
-        bundle["n_params"]["clean_train_cf"],
+        bundle["n_params"]["injected_noise_edges"],
         args.seed + 2026,
     )
+    heat_user_org_id = original_id(id_maps["user"], heat_user_id)
+    heat_item_org_id = original_id(id_maps["item"], heat_item_id)
     user_init_var = torch.exp(2.0 * bundle["model"].user_logsigma).detach().cpu().numpy()
     item_init_var = torch.exp(2.0 * bundle["model"].item_logsigma).detach().cpu().numpy()
     heatmap_values = np.vstack([
@@ -396,18 +433,19 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         [
             {
                 "pair_index": heat_pair_idx,
-                "source": "clean_train_cf",
+                "source": "injected_noise_edges",
                 "entity": entity,
-                "entity_id": int(entity_id),
+                "remap_id": int(entity_id),
+                "org_id": str(org_id),
                 "dimension": int(dim),
                 "learned_initial_variance": float(value),
             }
-            for row_idx, (entity, entity_id) in enumerate(
-                (("user", heat_user_id), ("item", heat_item_id))
+            for row_idx, (entity, entity_id, org_id) in enumerate(
+                (("user", heat_user_id, heat_user_org_id), ("item", heat_item_id, heat_item_org_id))
             )
             for dim, value in enumerate(heatmap_values[row_idx])
         ],
-        ["pair_index", "source", "entity", "entity_id", "dimension", "learned_initial_variance"],
+        ["pair_index", "source", "entity", "remap_id", "org_id", "dimension", "learned_initial_variance"],
     )
 
     pair_user_ids = noisy_edges[:, 0]
@@ -457,10 +495,13 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         aspect="auto",
         cmap="YlOrRd",
     )
-    axes[2].set_title("(c) Sampled interaction uncertainty heatmap")
+    axes[2].set_title("(c) Sampled noisy interaction uncertainty heatmap")
     axes[2].set_xlabel("Embedding dimension")
     axes[2].set_yticks([0, 1])
-    axes[2].set_yticklabels([f"User {heat_user_id}", f"Item {heat_item_id}"])
+    axes[2].set_yticklabels([
+        f"User {heat_user_org_id}",
+        f"Item {heat_item_org_id}",
+    ])
     fig.colorbar(im, ax=axes[2], label="Learned initial variance")
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
