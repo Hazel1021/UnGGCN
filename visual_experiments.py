@@ -17,6 +17,8 @@ Path(os.environ["XDG_CACHE_HOME"]).mkdir(parents=True, exist_ok=True)
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+plt.rcParams["font.sans-serif"] = ["Arial"]
+plt.rcParams["axes.unicode_minus"] = False
 import numpy as np
 import torch
 
