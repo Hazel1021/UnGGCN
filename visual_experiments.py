@@ -404,6 +404,11 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         user_init_var[heat_user_id],
         item_init_var[heat_item_id],
     ])
+    pair_var_contribution = dimension_uncertainty(
+        np.asarray([[heat_user_id, heat_item_id]], dtype=np.int64),
+        reps,
+        bundle["device"],
+    )[0]
 
     dimension_rows = []
     for row_idx, (entity, entity_id) in enumerate(
@@ -438,6 +443,19 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
             },
         ],
         ["pair_index", "source", "entity", "entity_id"],
+    )
+    write_csv(
+        save_dir / "sampled_pair_predictive_variance_by_dimension.csv",
+        [
+            {
+                "user_id": heat_user_id,
+                "item_id": heat_item_id,
+                "dimension": int(dim),
+                "predictive_variance_contribution": float(value),
+            }
+            for dim, value in enumerate(pair_var_contribution)
+        ],
+        ["user_id", "item_id", "dimension", "predictive_variance_contribution"],
     )
 
     pair_user_ids = noisy_edges[:, 0]
@@ -485,6 +503,17 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
     fig.savefig(save_dir / "motivation_validation.png", dpi=220)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(8.5, 2.2))
+    im = ax.imshow(pair_var_contribution.reshape(1, -1), aspect="auto", cmap="YlOrRd")
+    ax.set_title(f"Dimension-wise Predictive Variance Contribution (u={heat_user_id}, i={heat_item_id})")
+    ax.set_xlabel("Embedding dimension")
+    ax.set_yticks([0])
+    ax.set_yticklabels([r"$V_{uik}$"])
+    fig.colorbar(im, ax=ax, label=r"Contribution to $\mathrm{Var}[Y_{ui}]$")
+    fig.tight_layout()
+    fig.savefig(save_dir / "sampled_pair_predictive_variance_heatmap.png", dpi=220)
     plt.close(fig)
 
     print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
