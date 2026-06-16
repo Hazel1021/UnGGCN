@@ -504,7 +504,6 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     ])
     fig.colorbar(im, ax=axes[2], label="Learned initial variance")
 
-    fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
     fig.tight_layout()
     fig.savefig(save_dir / "motivation_validation.png", dpi=220)
     plt.close(fig)
