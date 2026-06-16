@@ -1,6 +1,7 @@
 import argparse
 import copy
 import csv
+import logging
 import math
 import os
 import random
@@ -17,6 +18,14 @@ Path(os.environ["XDG_CACHE_HOME"]).mkdir(parents=True, exist_ok=True)
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
+
+logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+if hasattr(font_manager, "_load_fontmanager"):
+    font_manager.fontManager = font_manager._load_fontmanager(try_read_cache=False)
+arial_font_path = font_manager.findfont("Arial", fallback_to_default=False)
+print(f"Using Matplotlib font: {arial_font_path}")
+plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Arial"]
 plt.rcParams["axes.unicode_minus"] = False
 import numpy as np
@@ -474,6 +483,7 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     label_fontsize = 13
     tick_fontsize = 12
     colorbar_fontsize = 12
+    title_pad = 14
 
     fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.2))
     clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
@@ -483,7 +493,12 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         showfliers=False,
         patch_artist=True,
     )
-    axes[0].set_title("(a) User-level predictive uncertainty", fontsize=title_fontsize)
+    axes[0].set_title(
+        "(a) User-level predictive uncertainty",
+        fontsize=title_fontsize,
+        fontweight="bold",
+        pad=title_pad,
+    )
     axes[0].set_ylabel(r"$\mathrm{Var}[Y_{ui}]$", fontsize=label_fontsize)
     axes[0].tick_params(axis="both", labelsize=tick_fontsize)
     axes[0].grid(axis="y", alpha=0.25)
@@ -493,7 +508,12 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     colors = np.where(sorted_delta >= 0, "#C44E52", "#4C72B0")
     axes[1].bar(x, sorted_delta, color=colors, width=0.85)
     axes[1].axhline(0.0, color="black", linewidth=1)
-    axes[1].set_title("(b) Dimension localization of noisy uncertainty", fontsize=title_fontsize)
+    axes[1].set_title(
+        "(b) Dimension localization of noisy uncertainty",
+        fontsize=title_fontsize,
+        fontweight="bold",
+        pad=title_pad,
+    )
     axes[1].set_xlabel("Dimensions sorted by mean noisy-clean delta", fontsize=label_fontsize)
     axes[1].set_ylabel(r"Mean $\Delta V_k$ (noisy - clean)", fontsize=label_fontsize)
     axes[1].tick_params(axis="both", labelsize=tick_fontsize)
@@ -504,7 +524,12 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         aspect="auto",
         cmap="YlOrRd",
     )
-    axes[2].set_title("(c) Sampled noisy interaction uncertainty heatmap", fontsize=title_fontsize)
+    axes[2].set_title(
+        "(c) Sampled noisy interaction uncertainty heatmap",
+        fontsize=title_fontsize,
+        fontweight="bold",
+        pad=title_pad,
+    )
     axes[2].set_xlabel("Embedding dimension", fontsize=label_fontsize)
     axes[2].set_yticks([0, 1])
     axes[2].set_yticklabels([
