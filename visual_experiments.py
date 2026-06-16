@@ -484,11 +484,11 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     tick_fontsize = 12
     colorbar_fontsize = 12
     title_pad = 14
-    box_face_color = "#3182BD"
-    box_median_color = "#FD8D3B"
+    box_face_color = "#339FC4"
+    box_median_color = "#ED7D32"
     bar_positive_color = "#339FC4"
     bar_negative_color = "#ED7D32"
-    heatmap_cmap = "YlGnBu"
+    heatmap_cmap = "BuGn"
 
     fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.2))
     clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
