@@ -400,7 +400,7 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     dim_order = np.argsort(mean_delta_dim)[::-1]
     heat_pair_idx, heat_user_id, heat_item_id = sample_uncertainty_pair(
         bundle["n_params"]["injected_noise_edges"],
-        args.seed + 2026,
+        args.seed + 2025,
     )
     heat_user_org_id = original_id(id_maps["user"], heat_user_id)
     heat_item_org_id = original_id(id_maps["item"], heat_item_id)
@@ -499,9 +499,10 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     axes[2].set_xlabel("Embedding dimension")
     axes[2].set_yticks([0, 1])
     axes[2].set_yticklabels([
-        f"User {heat_user_org_id}",
-        f"Item {heat_item_org_id}",
+        f"User\n{heat_user_org_id}",
+        f"Item\n{heat_item_org_id}",
     ])
+    axes[2].tick_params(axis="y", labelsize=7)
     fig.colorbar(im, ax=axes[2], label="Learned initial variance")
 
     fig.suptitle(f"Motivation Validation on Matched Interactions (noise={noise_ratio:g})")
