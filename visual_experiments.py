@@ -1,6 +1,5 @@
 import argparse
 import copy
-import csv
 import logging
 import math
 import os
@@ -48,14 +47,6 @@ def ensure_dir(path):
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def write_csv(path, rows, fieldnames):
-    ensure_dir(Path(path).parent)
-    with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def read_remap_list(path, item_offset=0):
     id_map = {}
     path = Path(path)
@@ -91,12 +82,12 @@ def expected_checkpoint_names(args):
             f"modelmodel_dataset_{args.dataset}_dim{args.dim}"
             f"_hops{args.context_hops}_lr{args.lr}_lw{args.lw}"
             f"_beta{args.beta}_prioralpha{args.prior_alpha}"
-            f"_priorbeta{args.prior_beta}_noise_{args.noise_ratio}.ckpt"
+            f"_priorbeta{args.prior_beta}_noise_{args.noise_ratio}_noatt.ckpt"
         ),
         (
             f"model_dataset_{args.dataset}_noise_{args.noise_ratio}"
             f"_dim{args.dim}_hops{args.context_hops}"
-            f"_beta{args.beta}_lr{args.lr}.ckpt"
+            f"_beta{args.beta}_lr{args.lr}_noatt.ckpt"
         ),
     ]
 
@@ -216,7 +207,7 @@ def load_model_bundle(noise_ratio, base_args):
     args = copy.deepcopy(base_args)
     args.noise_ratio = float(noise_ratio)
     args.cuda = bool(args.cuda and torch.cuda.is_available())
-    train_cf, user_dict, n_params, norm_mat, norm_mat_var = load_data(args)
+    _, _, n_params, norm_mat, norm_mat_var = load_data(args)
     device = torch.device("cuda:0") if args.cuda else torch.device("cpu")
     model = UnGGSL(n_params, args, norm_mat, norm_mat_var).to(device)
     ckpt_path = find_checkpoint(args)
@@ -225,13 +216,9 @@ def load_model_bundle(noise_ratio, base_args):
     model.load_state_dict(state)
     model.eval()
     return {
-        "args": args,
         "model": model,
         "device": device,
-        "train_cf": train_cf,
-        "user_dict": user_dict,
         "n_params": n_params,
-        "ckpt_path": ckpt_path,
     }
 
 
@@ -246,26 +233,24 @@ def representations(model):
     }
 
 
-def match_clean_noisy_edges(clean_edges, noisy_edges, max_pairs, seed):
+def match_clean_noisy_edges(clean_edges, noisy_edges, seed):
     clean_by_user = {}
     for user, item in np.asarray(clean_edges, dtype=np.int64).reshape(-1, 2):
         clean_by_user.setdefault(int(user), []).append(int(item))
 
-    eligible_noisy = [
-        (int(user), int(item))
-        for user, item in np.asarray(noisy_edges, dtype=np.int64).reshape(-1, 2)
-        if int(user) in clean_by_user
-    ]
+    noisy_by_user = {}
+    for user, item in np.asarray(noisy_edges, dtype=np.int64).reshape(-1, 2):
+        noisy_by_user.setdefault(int(user), []).append(int(item))
+
+    eligible_users = sorted(set(clean_by_user) & set(noisy_by_user))
     rng = np.random.default_rng(seed)
-    rng.shuffle(eligible_noisy)
-    eligible_noisy = eligible_noisy[:max_pairs]
+    rng.shuffle(eligible_users)
 
     matched_clean = []
     matched_noisy = []
-    for user, noisy_item in eligible_noisy:
-        clean_item = int(rng.choice(clean_by_user[user]))
-        matched_clean.append((user, clean_item))
-        matched_noisy.append((user, noisy_item))
+    for user in eligible_users:
+        matched_clean.append((user, int(rng.choice(clean_by_user[user]))))
+        matched_noisy.append((user, int(rng.choice(noisy_by_user[user]))))
     return (
         np.asarray(matched_clean, dtype=np.int64).reshape(-1, 2),
         np.asarray(matched_noisy, dtype=np.int64).reshape(-1, 2),
@@ -287,65 +272,15 @@ def dimension_uncertainty(edges, reps, device):
     return contributions.detach().cpu().numpy()
 
 
-def concentration_metrics(contributions):
-    contributions = np.asarray(contributions, dtype=np.float64)
-    probs = contributions / np.maximum(contributions.sum(axis=1, keepdims=True), 1e-12)
-    dim = contributions.shape[1]
-    top_k = max(1, int(math.ceil(dim * 0.2)))
-    top_share = np.sort(probs, axis=1)[:, -top_k:].sum(axis=1)
-    entropy = -(probs * np.log(probs + 1e-12)).sum(axis=1) / math.log(dim)
-    return top_share, entropy
-
-
-def paired_stats(clean, noisy):
-    clean = np.asarray(clean, dtype=np.float64)
-    noisy = np.asarray(noisy, dtype=np.float64)
-    delta = noisy - clean
-    result = {
-        "n_pairs": int(len(delta)),
-        "clean_mean": float(np.mean(clean)),
-        "noisy_mean": float(np.mean(noisy)),
-        "mean_paired_delta": float(np.mean(delta)),
-        "median_paired_delta": float(np.median(delta)),
-        "noisy_greater_fraction": float(np.mean(delta > 0)),
-        "cohen_dz": float(np.mean(delta) / np.std(delta, ddof=1))
-        if len(delta) > 1 and np.std(delta, ddof=1) > 0 else np.nan,
-        "wilcoxon_stat": np.nan,
-        "wilcoxon_p": np.nan,
-    }
-    try:
-        from scipy.stats import wilcoxon
-        stat, p_value = wilcoxon(noisy, clean, alternative="greater")
-        result["wilcoxon_stat"] = float(stat)
-        result["wilcoxon_p"] = float(p_value)
-    except (ImportError, ValueError):
-        pass
-    return result
-
-
-def aggregate_paired_by_user(user_ids, clean_values, noisy_values):
-    user_ids = np.asarray(user_ids, dtype=np.int64)
-    clean_values = np.asarray(clean_values, dtype=np.float64)
-    noisy_values = np.asarray(noisy_values, dtype=np.float64)
-    unique_users = np.unique(user_ids)
-    clean_user = np.asarray([
-        clean_values[user_ids == user_id].mean() for user_id in unique_users
-    ])
-    noisy_user = np.asarray([
-        noisy_values[user_ids == user_id].mean() for user_id in unique_users
-    ])
-    return unique_users, clean_user, noisy_user
-
-
 def sample_uncertainty_pair(edges, seed):
     rng = np.random.default_rng(seed)
     pair_idx = int(rng.integers(len(edges)))
     user_id = int(edges[pair_idx, 0])
     item_id = int(edges[pair_idx, 1])
-    return pair_idx, user_id, item_id
+    return user_id, item_id
 
 
-def run_motivation(args, noise_ratio, save_root, max_samples):
+def run_motivation(args, noise_ratio, save_root):
     if noise_ratio <= 0:
         raise ValueError("The motivation experiment requires --noise_ratio > 0.")
 
@@ -354,7 +289,6 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     clean_edges, noisy_edges = match_clean_noisy_edges(
         bundle["n_params"]["clean_train_cf"],
         bundle["n_params"]["injected_noise_edges"],
-        max_samples,
         args.seed,
     )
     if len(noisy_edges) == 0:
@@ -367,49 +301,14 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     noisy_dim_unc = dimension_uncertainty(noisy_edges, reps, bundle["device"])
     clean_edge_unc = clean_dim_unc.sum(axis=1)
     noisy_edge_unc = noisy_dim_unc.sum(axis=1)
-    clean_top_share, clean_entropy = concentration_metrics(clean_dim_unc)
-    noisy_top_share, noisy_entropy = concentration_metrics(noisy_dim_unc)
-
-    save_dir = Path(save_root) / "motivation"
-    ensure_dir(save_dir)
-    id_maps = load_original_id_maps(args, bundle["n_params"]["n_users"])
-
-    pair_rows = []
-    for pair_id, (clean_edge, noisy_edge) in enumerate(zip(clean_edges, noisy_edges)):
-        pair_rows.append({
-            "pair_id": pair_id,
-            "user_id": int(noisy_edge[0]),
-            "user_org_id": original_id(id_maps["user"], noisy_edge[0]),
-            "clean_item_id": int(clean_edge[1]),
-            "clean_item_org_id": original_id(id_maps["item"], clean_edge[1]),
-            "noisy_item_id": int(noisy_edge[1]),
-            "noisy_item_org_id": original_id(id_maps["item"], noisy_edge[1]),
-            "clean_predictive_variance": float(clean_edge_unc[pair_id]),
-            "noisy_predictive_variance": float(noisy_edge_unc[pair_id]),
-            "predictive_variance_delta": float(noisy_edge_unc[pair_id] - clean_edge_unc[pair_id]),
-            "clean_top20_dimension_share": float(clean_top_share[pair_id]),
-            "noisy_top20_dimension_share": float(noisy_top_share[pair_id]),
-            "clean_normalized_entropy": float(clean_entropy[pair_id]),
-            "noisy_normalized_entropy": float(noisy_entropy[pair_id]),
-        })
-    write_csv(
-        save_dir / "paired_edge_metrics.csv",
-        pair_rows,
-        [
-            "pair_id", "user_id", "user_org_id",
-            "clean_item_id", "clean_item_org_id",
-            "noisy_item_id", "noisy_item_org_id",
-            "clean_predictive_variance", "noisy_predictive_variance", "predictive_variance_delta",
-            "clean_top20_dimension_share", "noisy_top20_dimension_share",
-            "clean_normalized_entropy", "noisy_normalized_entropy",
-        ],
-    )
 
     mean_clean_dim = clean_dim_unc.mean(axis=0)
     mean_noisy_dim = noisy_dim_unc.mean(axis=0)
     mean_delta_dim = mean_noisy_dim - mean_clean_dim
     dim_order = np.argsort(mean_delta_dim)[::-1]
-    heat_pair_idx, heat_user_id, heat_item_id = sample_uncertainty_pair(
+
+    id_maps = load_original_id_maps(args, bundle["n_params"]["n_users"])
+    heat_user_id, heat_item_id = sample_uncertainty_pair(
         bundle["n_params"]["injected_noise_edges"],
         args.seed + 2025,
     )
@@ -422,62 +321,8 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
         item_init_var[heat_item_id],
     ])
 
-    dimension_rows = []
-    for rank, dim in enumerate(dim_order):
-        dimension_rows.append({
-            "dimension": int(dim),
-            "dimension_rank": int(rank),
-            "mean_clean_variance_contribution": float(mean_clean_dim[dim]),
-            "mean_noisy_variance_contribution": float(mean_noisy_dim[dim]),
-            "mean_delta_noisy_minus_clean": float(mean_delta_dim[dim]),
-        })
-    write_csv(
-        save_dir / "dimension_uncertainty_summary.csv",
-        dimension_rows,
-        [
-            "dimension", "dimension_rank", "mean_clean_variance_contribution",
-            "mean_noisy_variance_contribution", "mean_delta_noisy_minus_clean",
-        ],
-    )
-    write_csv(
-        save_dir / "sampled_pair_dimension_heatmap.csv",
-        [
-            {
-                "pair_index": heat_pair_idx,
-                "source": "injected_noise_edges",
-                "entity": entity,
-                "remap_id": int(entity_id),
-                "org_id": str(org_id),
-                "dimension": int(dim),
-                "learned_initial_variance": float(value),
-            }
-            for row_idx, (entity, entity_id, org_id) in enumerate(
-                (("user", heat_user_id, heat_user_org_id), ("item", heat_item_id, heat_item_org_id))
-            )
-            for dim, value in enumerate(heatmap_values[row_idx])
-        ],
-        ["pair_index", "source", "entity", "remap_id", "org_id", "dimension", "learned_initial_variance"],
-    )
-
-    pair_user_ids = noisy_edges[:, 0]
-    user_level_metrics = {}
-    stats_rows = []
-    for metric, clean_values, noisy_values in [
-        ("predictive_variance", clean_edge_unc, noisy_edge_unc),
-        ("top20_dimension_share", clean_top_share, noisy_top_share),
-        ("negative_normalized_entropy", -clean_entropy, -noisy_entropy),
-    ]:
-        _, clean_user_values, noisy_user_values = aggregate_paired_by_user(
-            pair_user_ids, clean_values, noisy_values
-        )
-        user_level_metrics[metric] = (clean_user_values, noisy_user_values)
-        metric_stats = {
-            "metric": metric,
-            "analysis_unit": "user",
-            **paired_stats(clean_user_values, noisy_user_values),
-        }
-        stats_rows.append(metric_stats)
-    write_csv(save_dir / "motivation_statistics.csv", stats_rows, list(stats_rows[0].keys()))
+    save_dir = Path(save_root) / "motivation"
+    ensure_dir(save_dir)
 
     title_fontsize = 15
     label_fontsize = 13
@@ -491,9 +336,8 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     heatmap_cmap = "GnBu_r"
 
     fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.2))
-    clean_user_unc, noisy_user_unc = user_level_metrics["predictive_variance"]
     box = axes[0].boxplot(
-        [clean_user_unc, noisy_user_unc],
+        [clean_edge_unc, noisy_edge_unc],
         labels=["Matched clean", "Injected noisy"],
         showfliers=False,
         patch_artist=True,
@@ -557,7 +401,7 @@ def run_motivation(args, noise_ratio, save_root, max_samples):
     fig.savefig(save_dir / "motivation_validation.pdf", bbox_inches="tight")
     plt.close(fig)
 
-    print(f"Saved {len(noisy_edges)} matched pairs and motivation results to {save_dir}")
+    print(f"Saved motivation figure ({len(noisy_edges)} matched pairs) to {save_dir}")
     print(
         "Sampled noisy pair for subplot (c): "
         f"user remap_id={heat_user_id}, org_id={heat_user_org_id}; "
@@ -569,19 +413,13 @@ def main():
     parser = argparse.ArgumentParser(description="UnGGCN visual experiments")
     parser.add_argument("--noise_ratio", type=float, default=0.3)
     parser.add_argument("--save_dir", type=str, default="./analysis_results/")
-    parser.add_argument(
-        "--max_samples",
-        type=int,
-        default=5000,
-        help="maximum number of same-user clean/noisy pairs in the motivation experiment",
-    )
     known, remaining = parser.parse_known_args()
 
     sys.argv = [sys.argv[0]] + remaining
     args = model_parse_args()
     set_seed(args.seed)
 
-    run_motivation(args, known.noise_ratio, known.save_dir, known.max_samples)
+    run_motivation(args, known.noise_ratio, known.save_dir)
 
 
 if __name__ == "__main__":
