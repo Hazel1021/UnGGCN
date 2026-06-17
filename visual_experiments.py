@@ -338,7 +338,7 @@ def run_motivation(args, noise_ratio, save_root):
     fig, axes = plt.subplots(1, 3, figsize=(17.5, 5.2))
     box = axes[0].boxplot(
         [clean_edge_unc, noisy_edge_unc],
-        labels=["Matched clean", "Injected noisy"],
+        labels=["clean", "noisy"],
         showfliers=False,
         patch_artist=True,
     )
