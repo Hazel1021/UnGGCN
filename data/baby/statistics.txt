@@ -1,0 +1,12 @@
+
+=====================================
+Dataset Statistics
+=====================================
+Number of Users: 16916
+Number of Items: 7627
+Total Interactions: 257152
+Sparsity: 0.1993%
+
+Average Interactions per User: 15.20
+Average Interactions per Item: 33.72
+=====================================

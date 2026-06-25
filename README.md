@@ -13,50 +13,43 @@ UnGGCN represents users and items as Gaussian distributions, where the mean capt
 - NumPy
 - tqdm
 
-
 ## Datasets
 
-We use three Amazon Review datasets: **Video Games**, **Baby Product**, and **Pet Supplies** with 10-core filtering.
+We use three datasets: **Baby Product**, **Pet Supplies**, and **Yelp2018**.
 
-| Dataset | #Users | #Items | #Interactions | Density |
-|---|---|---|---|---|
-| Video Games | 11,658 | 5,335 | 196,508 | 0.3160% |
-| Baby Product | 16,916 | 7,627 | 257,152 | 0.1993% |
-| Pet Supplies | 112,730 | 37,966 | 1,822,357 | 0.0426% |
+| Dataset | Directory | #Users | #Items | #Interactions | Density | Recommended `--beta` |
+|---|---|---:|---:|---:|---:|---:|
+| Baby Product | `baby` | 16,916 | 7,627 | 257,152 | 0.1993% | 0.5 |
+| Pet Supplies | `pet` | 112,730 | 37,966 | 1,822,357 | 0.0426% | 0.4 |
+| Yelp2018 | `yelp2018` | 77,277 | 45,638 | 2,103,895 | 0.0597% | 0.3 |
+
+## Environment Setup
+
+```bash
+conda env create -f environment.yml
+conda activate unggcn
+```
 
 ## Quick Start
 
 ```bash
-# Video Games
-python main.py --dataset videogames --lr 0.001 
-
 # Baby Product
-python main.py --dataset baby --lr 0.001
+python main.py --dataset baby --lr 0.001 --beta 0.5
 
 # Pet Supplies
-python main.py --dataset pet --lr 0.01
+python main.py --dataset pet --lr 0.001 --beta 0.4
+
+# Yelp2018
+python main.py --dataset yelp2018 --lr 0.001 --beta 0.3
 ```
 
 ### With noise injection
 
 ```bash
-python main.py --dataset baby --lr 0.001 --beta 0.6 --noise_ratio 0.3
+python main.py --dataset baby --lr 0.001 --beta 0.5 --noise_ratio 0.1
+python main.py --dataset pet --lr 0.001 --beta 0.4 --noise_ratio 0.1
+python main.py --dataset yelp2018 --lr 0.001 --beta 0.3 --noise_ratio 0.1
 ```
-
-### Motivation validation
-
-After training a noisy-data checkpoint, compare each injected noisy
-interaction with a clean interaction from the same user:
-
-```bash
-python visual_experiments.py --experiment motivation \
-  --dataset baby --noise_ratio 0.3 --lr 0.001 --beta 0.6 \
-  --max_samples 5000
-```
-
-The experiment reports paired predictive uncertainty, dimension-wise
-uncertainty concentration, variance-guided attenuation, and a one-sided
-paired Wilcoxon test under `analysis_results/motivation/`.
 
 ## Key Hyperparameters
 
@@ -65,7 +58,6 @@ paired Wilcoxon test under `analysis_results/motivation/`.
 | `--dim` | Embedding dimension | 64 |
 | `--context_hops` | Number of GCN layers (L) | 3 |
 | `--lr` | Learning rate | 0.001 |
-| `--beta` | Temperature parameter (τ) | 0.5 |
+| `--beta` | Temperature parameter (τ); use 0.5 for `baby`, 0.4 for `pet`, and 0.3 for `yelp2018` | 0.5 |
 | `--noise_ratio` | Ratio of injected noise | 0.0 |
 | `--batch_size` | Training batch size | 2048 |
-

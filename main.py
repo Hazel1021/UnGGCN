@@ -5,7 +5,6 @@ import torch
 import numpy as np
 from time import time
 import logging
-from torch.utils.tensorboard import SummaryWriter
 
 from utils.parser import parse_args, parse_ks
 from utils.data_loader import load_data
@@ -83,13 +82,6 @@ def format_metrics(prefix, metrics, k_values):
     return lines
 
 
-def init_tb_writer(args):
-    run_name = f"{args.gnn}{run_suffix(args)}_seed{args.seed}"
-    writer_path = os.path.join(args.out_dir, "runs", args.dataset, run_name)
-    os.makedirs(writer_path, exist_ok=True)
-    return SummaryWriter(log_dir=writer_path), writer_path
-
-
 def train(train_args=None):
     global n_users, n_items, K, device, args
 
@@ -131,8 +123,6 @@ def train(train_args=None):
     """"init logger"""
     logger = init_logger(args)
     logger.info(f"model parameters: {args}")
-    writer, writer_path = init_tb_writer(args)
-    logger.info(f"TensorBoard log dir: {writer_path}")
 
 
     model = UnGGSL(n_params, args, norm_mat,norm_mat_var,logger).to(device)
@@ -185,10 +175,6 @@ def train(train_args=None):
             batch_count += 1
             s = e
         train_e_t = time()
-        if batch_count > 0:
-            writer.add_scalar('loss/total', loss_value / batch_count, epoch)
-            writer.add_scalar('loss/ranking', ranking_loss_value / batch_count, epoch)
-            writer.add_scalar('loss/prior', prior_loss_value / batch_count, epoch)
 
         epoch_time = train_e_t - train_s_t
         epoch_times.append(epoch_time)
@@ -197,7 +183,7 @@ def train(train_args=None):
         if epoch % 5 == 0:
             model.eval()
             with torch.no_grad():
-                model.generate(split=True, tb_writer=writer, global_step=epoch)
+                model.generate(split=True)
             
             if user_dict['valid_user_set'] is None:
                 test_s_t = time()
@@ -306,9 +292,6 @@ def train(train_args=None):
             logger.info(line)
     else:
         logger.info('No validation checkpoint was evaluated.')
-
-    writer.flush()
-    writer.close()
 
 if __name__ == '__main__':
     args = parse_args()

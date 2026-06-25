@@ -72,23 +72,20 @@ class UnGGSL(nn.Module):
         self.sparse_norm_adj = self._convert_sp_mat_to_sp_tensor(self.adj_mat).to(self.device)
         self.sparse_norm_adj_var = self._convert_sp_mat_to_sp_tensor(self.adj_mat_var).to(self.device)
 
-    def encode(self, user_mu, user_logsigma, item_mu, item_logsigma, tb_writer=None, global_step=None):
+    def encode(self, user_mu, user_logsigma, item_mu, item_logsigma):
         all_mu = torch.cat([user_mu, item_mu], 0)
         all_logsigma = torch.cat([user_logsigma, item_logsigma], 0) 
         all_var = torch.exp(2 * all_logsigma)
 
         
-        # out_mean, out_var = self.gcn_encoder(
-        #     all_mu,
-        #     all_var,
-        #     self.sparse_norm_adj,
-        #     self.sparse_norm_adj_var,
-        #     tb_writer=tb_writer,
-        #     global_step=global_step
-        # )
+        out_mean, out_var = self.gcn_encoder(
+            all_mu,
+            all_var,
+            self.sparse_norm_adj,
+            self.sparse_norm_adj_var
+        )
 
-        return all_mu,all_var
-        # return out_mean, out_var
+        return out_mean, out_var
 
     def forward(self, batch=None):
         user = batch['users']
@@ -211,11 +208,10 @@ class UnGGSL(nn.Module):
         return total_loss, ranking_loss, prior_loss
 
 
-    def generate(self, split=True, tb_writer=None, global_step=None):
+    def generate(self, split=True):
 
         all_mu, all_var = self.encode(self.user_mu, self.user_logsigma,
-                                       self.item_mu, self.item_logsigma,
-                                       tb_writer=tb_writer, global_step=global_step)
+                                       self.item_mu, self.item_logsigma)
         if split:
             user_mean = all_mu[:self.n_users]
             item_mean = all_mu[self.n_users:]
@@ -274,7 +270,7 @@ class UncertaintyGraphConvLayer(nn.Module):
         print(f"UncertaintyGraphConvLayer initialized with beta={beta}")
 
 
-    def forward(self, mu, var, adj_norm, adj_norm_var, tb_writer=None, global_step=None, layer_idx=None):
+    def forward(self, mu, var, adj_norm, adj_norm_var):
         """
         Args:
             mu:  [N, dim]
@@ -290,14 +286,8 @@ class UncertaintyGraphConvLayer(nn.Module):
         # Weight based on variance.
         attention = F.softplus(-var, beta=self.beta)
 
-
-        # mu_weighted = mu
-        # sigma_weighted = var
-
         mu_weighted = mu * attention
         sigma_weighted = var * (attention ** 2)
-        # mu_weighted = mu
-        # sigma_weighted = var
 
         new_mu = torch.sparse.mm(adj_norm, mu_weighted)
         new_var= torch.sparse.mm(adj_norm_var, sigma_weighted)
@@ -331,7 +321,7 @@ class UncertaintyGCNEncoder(nn.Module):
         ])
         
 
-    def forward(self, init_mu, init_var, adj_norm, adj_norm_var, tb_writer=None, global_step=None):
+    def forward(self, init_mu, init_var, adj_norm, adj_norm_var):
         """
         Args:
             init_mu: initial mean embeddings [N, dim]
@@ -349,24 +339,15 @@ class UncertaintyGCNEncoder(nn.Module):
         mu = init_mu
         var = init_var
 
-        if tb_writer is not None and global_step is not None:
-            self._log_var_stats(tb_writer, var, layer_idx=0, global_step=global_step)
-        
         for layer_idx, conv in enumerate(self.convs, start=1):
             mu, var = conv(
                 mu,
                 var,
                 adj_norm,
                 adj_norm_var,
-                tb_writer=tb_writer,
-                global_step=global_step,
-                layer_idx=layer_idx,
             )
             mu_list.append(mu)
             var_list.append(var)
-
-            if tb_writer is not None and global_step is not None:
-                self._log_var_stats(tb_writer, var, layer_idx=layer_idx, global_step=global_step)
         
         n_layers = len(mu_list)
         mu_stack = torch.stack(mu_list, dim=0)   # [L+1, N, dim]
@@ -378,10 +359,3 @@ class UncertaintyGCNEncoder(nn.Module):
 
         
         return final_mu, final_var
-
-    def _log_var_stats(self, tb_writer, var, layer_idx, global_step):
-        with torch.no_grad():
-            if not torch.isfinite(var).all():
-                return
-            var_cpu = var.detach().cpu()
-            tb_writer.add_histogram(f"var_distribution/layer_{layer_idx}", var_cpu, global_step)

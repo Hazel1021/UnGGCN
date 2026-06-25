@@ -30,14 +30,14 @@ def parse_args():
 
     # ===== dataset ===== #
     parser.add_argument("--dataset", nargs="?", default="baby",
-                        help="Choose a dataset:[amazon,ali,prime_pantry,office]")
+                        help="Choose a dataset:[baby,pet,yelp2018]")
     parser.add_argument(
         "--data_path", nargs="?", default="data/", help="Input data path."
     )
 
     # ===== train ===== # 
     parser.add_argument("--gnn", nargs="?", default="unggcn",
-                        help="Choose a recommender:[lightgcn, ngcf,vgae,vgae_w]")
+                        help="Choose a recommender:[unggcn]")
     parser.add_argument('--epoch', type=int, default=1000, help='number of epochs')
     parser.add_argument('--batch_size', type=int, default=2048, help='batch size')
     parser.add_argument('--test_batch_size', type=int, default=2048, help='batch size in evaluation phase')
@@ -69,9 +69,6 @@ def parse_args():
                         help="early stopping patience counted on validation checks")
     # ===== save model ===== #
     parser.add_argument("--save", type=str2bool, default=True, help="save model or not")
-    parser.add_argument(
-        "--out_dir", type=str, default="./recordings/", help="output directory "
-    )
     parser.add_argument(
         "--model_dir", type=str, default="./models/", help="dir for saving")
     return parser.parse_args()
